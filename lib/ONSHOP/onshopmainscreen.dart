@@ -3,9 +3,14 @@ import 'package:flutter/material.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:harithapp/Screens/home.dart';
+import 'package:harithapp/ONSHOP/ONSHOP/Pages/screens/Discount%20card/Discountcard.dart';
+import 'package:harithapp/ONSHOP/ONSHOP/Pages/screens/Products/Productcategoriespage.dart';
+import 'package:harithapp/ONSHOP/ONSHOP/Pages/screens/Products/fridaybazaar.dart';
+import 'package:harithapp/ONSHOP/ONSHOP/Pages/screens/subcategory_page.dart';
+import 'package:harithapp/ONSHOP/homeonshop.dart';
 
 class MainScreen extends StatefulWidget {
+  
 
 
   const MainScreen({super.key,});
@@ -27,10 +32,10 @@ class _MainScreenState extends State<MainScreen> {
     // ✅ initialize _pages here (widget is available)
     _pages = [
       HomePage(),
-      HomePage(),
-      HomePage(),
-      HomePage(),
-      HomePage()
+       ProductCategoriesPage(),
+      SubcategoryGridPage(collectionName: 'shopcategories'),
+      DiscountCardPage(),
+      FridayBazaarSale(),
       // Friday Bazaar Sale Page
     ];
 
