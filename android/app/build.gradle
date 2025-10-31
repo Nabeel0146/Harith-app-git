@@ -1,0 +1,50 @@
+plugins {
+    id "com.android.application"
+    // START: FlutterFire Configuration
+    id 'com.google.gms.google-services'
+    // END: FlutterFire Configuration
+    // Use the fully-qualified Kotlin plugin id to pick up the version from settings.gradle
+    id "org.jetbrains.kotlin.android"
+    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+android {
+    namespace "com.harithagramam.app"
+
+    // Recommended: target compileSdk 34 for best AGP compatibility.
+    // If you intentionally need 36, keep 36 but ensure Android SDK 36 is installed on your machine.
+    compileSdk 36
+
+    ndkVersion flutter.ndkVersion
+
+    compileOptions {
+        // target Java 17 for Kotlin 2.x and AGP 8.6 compatibility
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        // Kotlin 2.x expects JVM target 17
+        jvmTarget = "17"
+    }
+
+    defaultConfig {
+        applicationId "com.harithagramam.app"
+        // keep min/target sdk values provided by Flutter
+        minSdkVersion 23
+        targetSdk flutter.targetSdkVersion
+        versionCode flutter.versionCode
+        versionName flutter.versionName
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.debug
+        }
+    }
+}
+
+flutter {
+    source "../.."
+}

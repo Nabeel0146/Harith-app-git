@@ -1,0 +1,200 @@
+{
+  "project_info": {
+    "project_number": "676046608509",
+    "project_id": "onshop-f003f",
+    "storage_bucket": "onshop-f003f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:676046608509:android:1c4f327fb9a6984984f914",
+        "android_client_info": {
+          "package_name": "com.citydotcom.onshop"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCZ3MSFQMNH2fgffG4h3v8exYnC-kU_e4M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:676046608509:android:1087fff8608cbab684f914",
+        "android_client_info": {
+          "package_name": "com.example.adminharith"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCZ3MSFQMNH2fgffG4h3v8exYnC-kU_e4M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:676046608509:android:3f6d4cc8ef6a201484f914",
+        "android_client_info": {
+          "package_name": "com.example.adminonshopapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCZ3MSFQMNH2fgffG4h3v8exYnC-kU_e4M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:676046608509:android:c9da9ffeec5893d884f914",
+        "android_client_info": {
+          "package_name": "com.example.harithagramam"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCZ3MSFQMNH2fgffG4h3v8exYnC-kU_e4M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:676046608509:android:b96acb95e7729d1684f914",
+        "android_client_info": {
+          "package_name": "com.example.harithapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCZ3MSFQMNH2fgffG4h3v8exYnC-kU_e4M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:676046608509:android:abb7bcef3a51b3d484f914",
+        "android_client_info": {
+          "package_name": "com.example.onshopapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCZ3MSFQMNH2fgffG4h3v8exYnC-kU_e4M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:676046608509:android:9e9e8dc2d97a9fd284f914",
+        "android_client_info": {
+          "package_name": "com.harithagramam.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCZ3MSFQMNH2fgffG4h3v8exYnC-kU_e4M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:676046608509:android:c4aae17beb0453a084f914",
+        "android_client_info": {
+          "package_name": "com.onshop.iosonshop"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCZ3MSFQMNH2fgffG4h3v8exYnC-kU_e4M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:676046608509:android:96ebbafe3259402884f914",
+        "android_client_info": {
+          "package_name": "com.onshopin.onshopapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCZ3MSFQMNH2fgffG4h3v8exYnC-kU_e4M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:676046608509:android:e627121f5069753a84f914",
+        "android_client_info": {
+          "package_name": "com.onshopnew.onshop"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCZ3MSFQMNH2fgffG4h3v8exYnC-kU_e4M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
