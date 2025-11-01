@@ -5,7 +5,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:harithapp/Screens/mainscreen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
 
@@ -17,6 +16,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
   final _fullNameCtrl = TextEditingController();
   final _mobileCtrl = TextEditingController();
+  final _referredByCtrl = TextEditingController(); // New controller for referred by field
 
   // Dropdown values
   String? _selectedPanchayath;
@@ -27,6 +27,8 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _loading = false;
   bool _checkingRegistration = true;
   bool _sharedPrefsError = false;
+  bool _validatingFacilitator = false;
+  String? _facilitatorValidationMessage;
 
   // Shared Preferences keys
   static const String _isRegisteredKey = 'isRegistered';
@@ -169,6 +171,50 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
+  /* ----------  Facilitator Validation  ---------- */
+  Future<void> _validateFacilitatorCode() async {
+    final code = _referredByCtrl.text.trim();
+    if (code.isEmpty) {
+      setState(() {
+        _facilitatorValidationMessage = null;
+      });
+      return;
+    }
+
+    setState(() {
+      _validatingFacilitator = true;
+      _facilitatorValidationMessage = null;
+    });
+
+    try {
+      final facilitatorQuery = await FirebaseFirestore.instance
+          .collection('harith-facilitators')
+          .where('code', isEqualTo: code)
+          .limit(1)
+          .get();
+
+      if (facilitatorQuery.docs.isNotEmpty) {
+        final facilitator = facilitatorQuery.docs.first.data();
+        setState(() {
+          _facilitatorValidationMessage = '✓ Valid facilitator: ${facilitator['name']}';
+        });
+      } else {
+        setState(() {
+          _facilitatorValidationMessage = '✗ Invalid facilitator code';
+        });
+      }
+    } catch (e) {
+      print('Error validating facilitator: $e');
+      setState(() {
+        _facilitatorValidationMessage = 'Error validating code';
+      });
+    } finally {
+      setState(() {
+        _validatingFacilitator = false;
+      });
+    }
+  }
+
   /* ----------  Lifecycle  ---------- */
   @override
   void initState() {
@@ -185,6 +231,7 @@ class _RegisterPageState extends State<RegisterPage> {
   void dispose() {
     _fullNameCtrl.dispose();
     _mobileCtrl.dispose();
+    _referredByCtrl.dispose();
     super.dispose();
   }
 
@@ -201,6 +248,18 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
+    // Validate facilitator code if provided
+    final facilitatorCode = _referredByCtrl.text.trim();
+    if (facilitatorCode.isNotEmpty && _facilitatorValidationMessage?.startsWith('✗') == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid facilitator code or leave it empty'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     setState(() => _loading = true);
 
     try {
@@ -208,8 +267,8 @@ class _RegisterPageState extends State<RegisterPage> {
       final uid = user?.uid ??
           (await FirebaseAuth.instance.signInAnonymously()).user!.uid;
 
-      // Save user data to harith-users collection
-      await FirebaseFirestore.instance.collection('harith-users').doc(uid).set({
+      // Prepare user data
+      final userData = {
         'fullName': _fullNameCtrl.text.trim(),
         'mobile': _mobileCtrl.text.trim(),
         'panchayath': _selectedPanchayath,
@@ -218,7 +277,19 @@ class _RegisterPageState extends State<RegisterPage> {
         'userId': uid,
         'email': user?.email, // Optional: store email if available
         'lastLogin': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      };
+
+      // Add facilitator code if provided and valid
+      if (facilitatorCode.isNotEmpty && _facilitatorValidationMessage?.startsWith('✓') == true) {
+        userData['facilitatorCode'] = facilitatorCode;
+        userData['referredBy'] = facilitatorCode; // Store in both fields for compatibility
+      }
+
+      // Save user data to harith-users collection
+      await FirebaseFirestore.instance.collection('harith-users').doc(uid).set(
+        userData,
+        SetOptions(merge: true),
+      );
 
       // Try to save registration status to SharedPreferences
       // If it fails, we'll still proceed since Firestore has the data
@@ -265,12 +336,12 @@ class _RegisterPageState extends State<RegisterPage> {
 
   /* ----------  UI helpers  ---------- */
   Widget _textField(String label, TextEditingController c,
-      {TextInputType kb = TextInputType.text}) {
+      {TextInputType kb = TextInputType.text, bool isOptional = false}) {
     return TextFormField(
       controller: c,
       keyboardType: kb,
       decoration: InputDecoration(
-        labelText: label,
+        labelText: label + (isOptional ? ' (Optional)' : ''),
         filled: true,
         fillColor: Colors.white,
         border: OutlineInputBorder(
@@ -288,10 +359,10 @@ class _RegisterPageState extends State<RegisterPage> {
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
       validator: (v) {
-        if (v == null || v.trim().isEmpty) {
+        if (!isOptional && (v == null || v.trim().isEmpty)) {
           return 'Required';
         }
-        if (kb == TextInputType.phone) {
+        if (kb == TextInputType.phone && v!.trim().isNotEmpty) {
           if (v.trim().length != 10) {
             return 'Enter a valid 10-digit mobile number';
           }
@@ -301,6 +372,70 @@ class _RegisterPageState extends State<RegisterPage> {
         }
         return null;
       },
+    );
+  }
+
+  Widget _referredByField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextFormField(
+          controller: _referredByCtrl,
+          decoration: InputDecoration(
+            labelText: 'Referred by (Facilitator Code) - Optional',
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.grey),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.grey),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.green, width: 2),
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            suffixIcon: _validatingFacilitator
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : null,
+          ),
+          onChanged: (value) {
+            // Debounce validation
+            Future.delayed(const Duration(milliseconds: 500), () {
+              if (mounted) _validateFacilitatorCode();
+            });
+          },
+        ),
+        if (_facilitatorValidationMessage != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 4, left: 8),
+            child: Text(
+              _facilitatorValidationMessage!,
+              style: TextStyle(
+                fontSize: 12,
+                color: _facilitatorValidationMessage!.startsWith('✓') 
+                    ? Colors.green 
+                    : Colors.red,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        const SizedBox(height: 4),
+        const Text(
+          'Enter the facilitator code if someone referred you',
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.white70,
+          ),
+        ),
+      ],
     );
   }
 
@@ -474,10 +609,14 @@ class _RegisterPageState extends State<RegisterPage> {
                         const SizedBox(height: 16),
                         _textField('Mobile', _mobileCtrl, kb: TextInputType.phone),
                         const SizedBox(height: 16),
+                       
                         _panchayathDropDown(),
                         const SizedBox(height: 16),
                         _wardDropDown(),
-                        const SizedBox(height: 32),
+                        const SizedBox(height:16),
+                         _referredByField(), // New referred by field
+                        const SizedBox(height: 16),
+                        
                         ElevatedButton(
                           onPressed: _loading ? null : _submit,
                           style: ElevatedButton.styleFrom(
