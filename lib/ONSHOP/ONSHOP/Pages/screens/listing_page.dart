@@ -9,6 +9,7 @@ import 'package:harithapp/ONSHOP/ONSHOP/Pages/screens/Products/Shopprofile.dart'
 import 'package:harithapp/ONSHOP/ONSHOP/Pages/utils/app_functions.dart';
 import 'package:harithapp/ONSHOP/ONSHOP/Pages/widgets/listingfloatingbutton.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ListingPage extends StatefulWidget {
   final String subcategory;
@@ -57,6 +58,71 @@ class _ListingPageState extends State<ListingPage> {
 
     if (selectedCity == null) {
       await _fetchLoggedInUserCity();
+    }
+  }
+  // Add these functions to your _ListingPageState class
+
+  Future<void> _openWhatsApp(String whatsappNumber) async {
+    try {
+      final cleanNumber = whatsappNumber.replaceAll(RegExp(r'[^\d+]'), '');
+      final url = 'https://wa.me/$cleanNumber';
+
+      if (!await launchUrl(Uri.parse(url))) {
+        print('Could not launch $url');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open WhatsApp')),
+        );
+      }
+    } catch (e) {
+      print('Error launching WhatsApp: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
+
+  Future<void> _makeCall(String phoneNumber) async {
+    try {
+      final cleanNumber = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
+      final url = 'tel:$cleanNumber';
+
+      if (!await launchUrl(Uri.parse(url))) {
+        print('Could not launch $url');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not make call')),
+        );
+      }
+    } catch (e) {
+      print('Error making call: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
+
+  Future<void> _shareDetails(
+      String name, String description, String mobile) async {
+    try {
+      final text =
+          'Check out this shop: $name\nDescription: $description\nContact: $mobile';
+
+      // For Flutter, you can use the share package or show a share dialog
+      // If using share package: await Share.share(text);
+
+      // Alternative: Show a dialog with share options
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Share: $text'),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+
+      print('Share content: $text');
+    } catch (e) {
+      print('Error sharing: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to share')),
+      );
     }
   }
 
@@ -535,65 +601,68 @@ class _ListingPageState extends State<ListingPage> {
                                                       mainAxisAlignment:
                                                           MainAxisAlignment.end,
                                                       children: [
+                                                        // Update the phone call button
                                                         if (item['mobile'] !=
                                                             null)
                                                           GestureDetector(
-                                                              onTap: () {
-                                                                makeCall(item[
-                                                                    'mobile']);
-                                                              },
-                                                              child:
-                                                                  Image.asset(
-                                                                "asset/phone-call.png",
-                                                                width: 20,
-                                                              )),
-                                                        const SizedBox(
-                                                            width: 10),
+                                                            onTap: () {
+                                                              _makeCall(item[
+                                                                  'mobile']);
+                                                            },
+                                                            child: Image.asset(
+                                                              "asset/phone-call.png",
+                                                              width: 20,
+                                                            ),
+                                                          ),
+                                                          SizedBox(width: 3,),
+// Update the WhatsApp button
                                                         if (item['whatsapp'] !=
                                                                 null &&
                                                             item['whatsapp']
                                                                 .isNotEmpty)
+                                                                
                                                           GestureDetector(
                                                             onTap: () {
-                                                              // openw(
-                                                              //     context,
-                                                              //     item[
-                                                              //         'whatsapp']);
+                                                              _openWhatsApp(item[
+                                                                  'whatsapp']);
                                                             },
                                                             child: Image.asset(
                                                                 "asset/whatsapp2.png",
                                                                 width: 20),
                                                           ),
-                                                        const SizedBox(
-                                                            width: 10),
+                                                          SizedBox(width: 3,),
+
+// Update the share button
                                                         GestureDetector(
-                                                            // onTap: () {
-                                                            //   if (item['name'] != null &&
-                                                            //       item['description'] !=
-                                                            //           null &&
-                                                            //       item['mobile'] !=
-                                                            //           null) {
-                                                            //     shareDetails(
-                                                            //         item[
-                                                            //             'name'],
-                                                            //         item[
-                                                            //             'description'],
-                                                            //         item[
-                                                            //             'mobile']);
-                                                            //   } else {
-                                                            //     ScaffoldMessenger.of(
-                                                            //             context)
-                                                            //         .showSnackBar(
-                                                            //       const SnackBar(
-                                                            //           content: Text(
-                                                            //               'Unable to share. Missing item details.')),
-                                                            //     );
-                                                            //   }
-                                                            // },
-                                                            child: Image.asset(
-                                                              "asset/share2.png",
-                                                              width: 20,
-                                                            )),
+                                                          onTap: () {
+                                                            if (item['name'] !=
+                                                                    null &&
+                                                                item['description'] !=
+                                                                    null &&
+                                                                item['mobile'] !=
+                                                                    null) {
+                                                              _shareDetails(
+                                                                item['name'],
+                                                                item[
+                                                                    'description'],
+                                                                item['mobile'],
+                                                              );
+                                                            } else {
+                                                              ScaffoldMessenger
+                                                                      .of(context)
+                                                                  .showSnackBar(
+                                                                const SnackBar(
+                                                                  content: Text(
+                                                                      'Unable to share. Missing item details.'),
+                                                                ),
+                                                              );
+                                                            }
+                                                          },
+                                                          child: Image.asset(
+                                                            "asset/share2.png",
+                                                            width: 20,
+                                                          ),
+                                                        ),
                                                       ],
                                                     ),
                                                   ],

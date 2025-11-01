@@ -64,35 +64,43 @@ class _FridayBazaarSaleState extends State<FridayBazaarSale> {
       return 'No address provided';
     }
   }
-
-  /* ---------- WhatsApp ---------- */
-  Future<void> _openWhatsApp(
-    String phoneNumber,
-    String productName,
-    int price,
-    int discountedPrice,
-    String description,
-  ) async {
+Future<void> _openWhatsApp(
+  String phoneNumber,
+  String productName,
+  int price,
+  int discountedPrice,
+  String description,
+) async {
+  try {
     final address = await getUserAddress();
     final cleanNumber = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
     final text = '''
-Name: $productName
-Price: ₹$price
-Discounted Price: ₹$discountedPrice
-Description: $description
-Address: $address
-''';
-    final uri = Uri.parse(
-        'https://wa.me/$cleanNumber?text=${Uri.encodeComponent(text)}');
+Hello! I am interested in your product:
 
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
+*Product:* $productName
+*Price:* ₹$price
+*Discounted Price:* ₹$discountedPrice
+*Description:* $description
+*Address:* $address
+
+Please process this order. Thank you!
+'''.trim();
+
+    final uri = Uri.parse('https://wa.me/$cleanNumber?text=${Uri.encodeComponent(text)}');
+
+    if (!await launchUrl(uri)) {
+      print('Could not launch $uri');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Could not open WhatsApp for $phoneNumber')),
       );
     }
+  } catch (e) {
+    print('Error launching WhatsApp: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error: $e')),
+    );
   }
+}
 
   /* ---------- Lifecycle ---------- */
   @override

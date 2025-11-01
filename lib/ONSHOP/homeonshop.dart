@@ -474,50 +474,53 @@ Widget buildBanner(List<String> bannerImages) {
   }
 
   Future<void> _openWhatsApp(String phoneNumber, String productName, int price,
-      int discountedPrice, String description) async {
-    final userAddress = await getUserAddress();
-    final formattedPhoneNumber = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
-    final productDetails = """
-  Name: $productName
-  Price: ₹$price
-  Discounted Price: ₹$discountedPrice
-  Description: $description
-  Address: $userAddress
-  """;
+    int discountedPrice, String description) async {
+  final userAddress = await getUserAddress();
+  final formattedPhoneNumber = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
+  final productDetails = """
+Hello! I am interested in your product:
 
-    final uri = Uri.parse(
-        'https://wa.me/$formattedPhoneNumber?text=${Uri.encodeComponent(productDetails)}');
+*Product:* $productName
+*Price:* ₹$price
+*Discounted Price:* ₹$discountedPrice
+*Description:* $description
+*Address:* $userAddress
 
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not open WhatsApp for $phoneNumber')),
-      );
-    }
+Please process this order. Thank you!
+  """.trim();
+
+  final uri = Uri.parse(
+      'https://wa.me/$formattedPhoneNumber?text=${Uri.encodeComponent(productDetails)}');
+
+  if (!await launchUrl(uri)) {
+    print('Could not launch $uri');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Could not open WhatsApp for $phoneNumber')),
+    );
   }
+}
 
-  Future<String> getUserAddress() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        return 'No address provided';
-      }
-
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
-      if (!userDoc.exists) {
-        return 'No address provided';
-      }
-
-      return userDoc.data()?['address'] ?? 'No address provided';
-    } catch (e) {
-      print('Error fetching user address: $e');
+Future<String> getUserAddress() async {
+  try {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
       return 'No address provided';
     }
+
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users') // Keep original collection name
+        .doc(user.uid)
+        .get();
+    if (!userDoc.exists) {
+      return 'No address provided';
+    }
+
+    return userDoc.data()?['address'] ?? 'No address provided'; // Keep original field name
+  } catch (e) {
+    print('Error fetching user address: $e');
+    return 'No address provided';
   }
+}
 
   Future<void> _fetchCities() async {
     try {

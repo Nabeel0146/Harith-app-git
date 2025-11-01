@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:url_launcher/url_launcher_string.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class HomemadeSingleProductPage extends StatelessWidget {
   final Map<String, dynamic> product;
@@ -18,19 +18,22 @@ class HomemadeSingleProductPage extends StatelessWidget {
       return;
     }
 
+    // Clean the contact number (remove spaces, dashes, etc.)
+    final cleanContact = whatsappNumber.replaceAll(RegExp(r'[+\s\-()]'), '');
+    
     final message =
         'Hello! I am interested in your product: *${product['name']}*';
-    final url = 'https://wa.me/$whatsappNumber?text=${Uri.encodeComponent(message)}';
+    final url = 'https://wa.me/$cleanContact?text=${Uri.encodeComponent(message)}';
 
     try {
-      if (await canLaunchUrlString(url)) {
-        await launchUrlString(url, mode: LaunchMode.externalNonBrowserApplication);
-      } else {
+      if (!await launchUrl(Uri.parse(url))) {
+        print('Could not launch $url');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Unable to open WhatsApp')),
         );
       }
     } catch (e) {
+      print('Error launching WhatsApp: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
       );

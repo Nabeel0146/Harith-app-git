@@ -30,10 +30,7 @@ PreferredSizeWidget get appBar {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(22)),
       ),
-      leading: IconButton(
-        icon: const Icon(Icons.menu, color: Colors.white, size: 28),
-        onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-      ),
+     
       flexibleSpace: SafeArea(
         child: Padding(
           padding:
@@ -135,115 +132,7 @@ PreferredSizeWidget get appBar {
 }
 
   /* ---------- Sidebar Drawer ---------- */
-  Widget _buildDrawer() {
-    return Drawer(
-      child: Container(
-        color: Colors.white,
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            DrawerHeader(
-              decoration: BoxDecoration(
-                color: const Color.fromARGB(255, 116, 190, 119),
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(12),
-                  bottomRight: Radius.circular(12),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Image.asset('assets/harithagramamlogogreen.png', 
-                    height: 60,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        height: 60,
-                        width: 60,
-                        color: Colors.white,
-                        child: const Icon(Icons.eco, color: Colors.green),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    'Harithagramam',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const Text(
-                    'Green Living Platform',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            _drawerItem(
-              icon: Icons.home,
-              title: 'Home',
-              onTap: () {
-                Navigator.pop(context);
-              },
-            ),
-            _drawerItem(
-              icon: Icons.shopping_bag,
-              title: 'Products',
-              onTap: () {
-                Navigator.pop(context);
-                // Navigate to products page
-              },
-            ),
-            _drawerItem(
-              icon: Icons.eco,
-              title: 'Homemade',
-              onTap: () {
-                Navigator.pop(context);
-                // Navigate to homemade page
-              },
-            ),
-            _drawerItem(
-              icon: Icons.person,
-              title: 'Profile',
-              onTap: () {
-                Navigator.pop(context);
-                // Navigate to profile page
-              },
-            ),
-            _drawerItem(
-              icon: Icons.settings,
-              title: 'Settings',
-              onTap: () {
-                Navigator.pop(context);
-                // Navigate to settings page
-              },
-            ),
-            _drawerItem(
-              icon: Icons.help,
-              title: 'Help & Support',
-              onTap: () {
-                Navigator.pop(context);
-                // Navigate to help page
-              },
-            ),
-            const Divider(),
-            _drawerItem(
-              icon: Icons.logout,
-              title: 'Logout',
-              onTap: () {
-                Navigator.pop(context);
-                _showLogoutDialog();
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+ 
 
   Widget _drawerItem({
     required IconData icon,
@@ -837,73 +726,101 @@ PreferredSizeWidget get appBar {
   }
 
   /* ---------- Sponsored Ads ---------- */
-  Widget _buildSponsoredAds() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('harith-sponsored-ads')
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          print('Sponsored Ads Error: ${snapshot.error}');
-          return const SizedBox.shrink();
+ Widget _buildSponsoredAds() {
+  return StreamBuilder<QuerySnapshot>(
+    stream: FirebaseFirestore.instance
+        .collection('harith-sponsored-ads')
+        .snapshots(),
+    builder: (context, snapshot) {
+      if (snapshot.hasError) {
+        print('Sponsored Ads Error: ${snapshot.error}');
+        return const SizedBox.shrink();
+      }
+
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return const SizedBox.shrink();
+      }
+
+      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+        return const SizedBox.shrink();
+      }
+
+      final docs = snapshot.data!.docs;
+      
+      // Collect all available ad URLs with proper null safety
+      final urls = <String>[];
+      
+      for (final doc in docs) {
+        final data = doc.data() as Map<String, dynamic>?;
+        if (data != null) {
+          // Check each possible ad field and add if it exists and is not empty
+          for (int i = 1; i <= 9; i++) {
+            final adField = 'ad$i';
+            final adUrl = data[adField] as String?;
+            if (adUrl != null && adUrl.isNotEmpty) {
+              urls.add(adUrl);
+            }
+          }
         }
+      }
 
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox.shrink();
-        }
+      // Alternative approach using a list of field names
+      // final urls = docs
+      //     .map((doc) => doc.data() as Map<String, dynamic>?)
+      //     .where((data) => data != null)
+      //     .expand((data) => [
+      //           data!['ad1'] as String?,
+      //           data['ad2'] as String?,
+      //           data['ad3'] as String?,
+      //           data['ad4'] as String?,
+      //           data['ad5'] as String?,
+      //           data['ad6'] as String?,
+      //           data['ad7'] as String?,
+      //           data['ad8'] as String?,
+      //           data['ad9'] as String?,
+      //         ])
+      //     .whereType<String>()
+      //     .where((url) => url.isNotEmpty)
+      //     .toList();
 
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const SizedBox.shrink();
-        }
+      if (urls.isEmpty) return const SizedBox.shrink();
 
-        final docs = snapshot.data!.docs;
-        final urls = docs
-            .expand((doc) => [
-                  doc['ad1'] as String?,
-                  doc['ad2'] as String?,
-                ])
-            .whereType<String>()
-            .where((u) => u.isNotEmpty)
-            .toList();
-
-        if (urls.isEmpty) return const SizedBox.shrink();
-
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Sponsored Ads',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Sponsored Ads',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            CarouselSlider.builder(
+              itemCount: urls.length,
+              options: CarouselOptions(
+                height: 280,
+                autoPlay: true,
+                enlargeCenterPage: true,
+                viewportFraction: 0.97,
+                autoPlayInterval: const Duration(seconds: 4),
               ),
-              const SizedBox(height: 8),
-              CarouselSlider.builder(
-                itemCount: urls.length,
-                options: CarouselOptions(
-                  height: 280,
-                  autoPlay: true,
-                  enlargeCenterPage: true,
-                  viewportFraction: 0.97,
-                  autoPlayInterval: const Duration(seconds: 4),
-                ),
-                itemBuilder: (_, idx, __) => ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: CachedNetworkImage(
-                    imageUrl: urls[idx],
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    placeholder: (_, __) => _buildBannerShimmer(),
-                    errorWidget: (_, __, ___) => _buildPlaceholderBanner(),
-                  ),
+              itemBuilder: (_, idx, __) => ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: CachedNetworkImage(
+                  imageUrl: urls[idx],
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  placeholder: (_, __) => _buildBannerShimmer(),
+                  errorWidget: (_, __, ___) => _buildPlaceholderBanner(),
                 ),
               ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -911,7 +828,7 @@ PreferredSizeWidget get appBar {
       key: _scaffoldKey,
       backgroundColor: Colors.white,
       appBar: appBar,
-      drawer: _buildDrawer(),
+
       body: SingleChildScrollView(
         child: Column(
           children: [

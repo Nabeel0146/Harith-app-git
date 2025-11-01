@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:url_launcher/url_launcher_string.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SingleProductPage extends StatelessWidget {
   final Map<String, dynamic> product;
@@ -83,13 +83,9 @@ Please process this order. Thank you!
       // Create WhatsApp URL
       final whatsappUrl = 'https://wa.me/$cleanContact?text=${Uri.encodeComponent(message)}';
 
-      // Launch WhatsApp - ALWAYS open in external browser
-      if (await canLaunchUrlString(whatsappUrl)) {
-        await launchUrlString(
-          whatsappUrl,
-          mode: LaunchMode.externalApplication, // Always open in external browser
-        );
-      } else {
+      // Launch WhatsApp using the same pattern as reference code
+      if (!await launchUrl(Uri.parse(whatsappUrl))) {
+        print('Could not launch $whatsappUrl');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Could not open WhatsApp'),

@@ -67,30 +67,39 @@ class _ProductsPageState extends State<ProductsPage> {
       return 'No address provided';
     }
   }
-
-  Future<void> _openWhatsApp(String phoneNumber, String productName, int price,
-      int discountedPrice, String description) async {
+Future<void> _openWhatsApp(String phoneNumber, String productName, int price,
+    int discountedPrice, String description) async {
+  try {
     final userAddress = await getUserAddress();
     final formattedPhoneNumber = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
     final productDetails = """
-    Name: $productName
-    Price: ₹$price
-    Discounted Price: ₹$discountedPrice
-    Description: $description
-    Address: $userAddress
-    """;
+Hello! I am interested in your product:
+
+*Product:* $productName
+*Price:* ₹$price
+*Discounted Price:* ₹$discountedPrice
+*Description:* $description
+*Address:* $userAddress
+
+Please process this order. Thank you!
+    """.trim();
 
     final uri = Uri.parse(
         'https://wa.me/$formattedPhoneNumber?text=${Uri.encodeComponent(productDetails)}');
 
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
+    if (!await launchUrl(uri)) {
+      print('Could not launch $uri');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Could not open WhatsApp for $phoneNumber')),
       );
     }
+  } catch (e) {
+    print('Error launching WhatsApp: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error: $e')),
+    );
   }
+}
 
   @override
   Widget build(BuildContext context) {
