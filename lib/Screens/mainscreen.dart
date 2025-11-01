@@ -24,7 +24,7 @@ class _MainScreenState extends State<MainScreen> {
     const HomePage(),
     const HomemadeProductsPage(),
     const AllProductsPage(),
-    const ProfilePage(),
+     ProfileScreen(),
   ];
 
   @override

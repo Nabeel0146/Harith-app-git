@@ -18,7 +18,7 @@ class SingleProductPage extends StatelessWidget {
 
       // Get user's panchayath
       final userDoc = await FirebaseFirestore.instance
-          .collection('users')
+          .collection('harith-users')
           .doc(uid)
           .get();
       
@@ -83,11 +83,11 @@ Please process this order. Thank you!
       // Create WhatsApp URL
       final whatsappUrl = 'https://wa.me/$cleanContact?text=${Uri.encodeComponent(message)}';
 
-      // Launch WhatsApp
+      // Launch WhatsApp - ALWAYS open in external browser
       if (await canLaunchUrlString(whatsappUrl)) {
         await launchUrlString(
           whatsappUrl,
-          mode: LaunchMode.externalApplication,
+          mode: LaunchMode.externalApplication, // Always open in external browser
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(

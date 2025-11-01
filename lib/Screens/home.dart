@@ -449,7 +449,7 @@ PreferredSizeWidget get appBar {
             },
             child: Container(
               width: double.infinity,
-              height: 120,
+              height: 100,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
