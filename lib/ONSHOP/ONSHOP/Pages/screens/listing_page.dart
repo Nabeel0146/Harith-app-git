@@ -5,9 +5,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:harithagramam/1SCREENS/ONSHOP/Pages/screens/Products/Shopprofile.dart';
-import 'package:harithagramam/1SCREENS/ONSHOP/Pages/widgets/listingfloatingbutton.dart';
-import 'package:harithagramam/1SCREENS/ONSHOP/Pages/widgets/listingwidgets.dart';
+import 'package:harithapp/ONSHOP/ONSHOP/Pages/screens/Products/Shopprofile.dart';
+import 'package:harithapp/ONSHOP/ONSHOP/Pages/utils/app_functions.dart';
+import 'package:harithapp/ONSHOP/ONSHOP/Pages/widgets/listingfloatingbutton.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ListingPage extends StatefulWidget {
@@ -555,10 +555,10 @@ class _ListingPageState extends State<ListingPage> {
                                                                 .isNotEmpty)
                                                           GestureDetector(
                                                             onTap: () {
-                                                              openWhatsApp(
-                                                                  context,
-                                                                  item[
-                                                                      'whatsapp']);
+                                                              // openw(
+                                                              //     context,
+                                                              //     item[
+                                                              //         'whatsapp']);
                                                             },
                                                             child: Image.asset(
                                                                 "asset/whatsapp2.png",
@@ -567,29 +567,29 @@ class _ListingPageState extends State<ListingPage> {
                                                         const SizedBox(
                                                             width: 10),
                                                         GestureDetector(
-                                                            onTap: () {
-                                                              if (item['name'] != null &&
-                                                                  item['description'] !=
-                                                                      null &&
-                                                                  item['mobile'] !=
-                                                                      null) {
-                                                                shareDetails(
-                                                                    item[
-                                                                        'name'],
-                                                                    item[
-                                                                        'description'],
-                                                                    item[
-                                                                        'mobile']);
-                                                              } else {
-                                                                ScaffoldMessenger.of(
-                                                                        context)
-                                                                    .showSnackBar(
-                                                                  const SnackBar(
-                                                                      content: Text(
-                                                                          'Unable to share. Missing item details.')),
-                                                                );
-                                                              }
-                                                            },
+                                                            // onTap: () {
+                                                            //   if (item['name'] != null &&
+                                                            //       item['description'] !=
+                                                            //           null &&
+                                                            //       item['mobile'] !=
+                                                            //           null) {
+                                                            //     shareDetails(
+                                                            //         item[
+                                                            //             'name'],
+                                                            //         item[
+                                                            //             'description'],
+                                                            //         item[
+                                                            //             'mobile']);
+                                                            //   } else {
+                                                            //     ScaffoldMessenger.of(
+                                                            //             context)
+                                                            //         .showSnackBar(
+                                                            //       const SnackBar(
+                                                            //           content: Text(
+                                                            //               'Unable to share. Missing item details.')),
+                                                            //     );
+                                                            //   }
+                                                            // },
                                                             child: Image.asset(
                                                               "asset/share2.png",
                                                               width: 20,

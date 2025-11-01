@@ -2,7 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:carousel_slider/carousel_slider.dart';
-import 'package:harithagramam/1SCREENS/ONSHOP/Pages/Hospitals/hospitallisting.dart';
+import 'package:harithapp/ONSHOP/ONSHOP/Pages/Hospitals/hospitallisting.dart';
 
 
 import 'package:shimmer/shimmer.dart';

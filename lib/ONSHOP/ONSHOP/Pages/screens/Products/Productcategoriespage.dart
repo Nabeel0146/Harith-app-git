@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:harithagramam/1SCREENS/ONSHOP/Pages/screens/Products/Productspage.dart';
+import 'package:harithapp/ONSHOP/ONSHOP/Pages/screens/Products/Productspage.dart';
+
 import 'package:shimmer/shimmer.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:carousel_slider/carousel_slider.dart';
