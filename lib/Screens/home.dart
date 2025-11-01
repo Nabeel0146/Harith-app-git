@@ -177,62 +177,85 @@ PreferredSizeWidget get appBar {
   }
 
   /* ---------- Banner ---------- */
-  Widget _buildBanner() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('harith-homepage_banners')
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          print('Banner Error: ${snapshot.error}');
-          return _buildErrorWidget('Failed to load banners');
+Widget _buildBanner() {
+  return StreamBuilder<QuerySnapshot>(
+    stream: FirebaseFirestore.instance
+        .collection('harith-homepage_banners')
+        .snapshots(),
+    builder: (context, snapshot) {
+      // Handle connection state and errors first
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return _buildBannerShimmer();
+      }
+
+      if (snapshot.hasError) {
+        print('Banner Error: ${snapshot.error}');
+        return _buildErrorWidget('Failed to load banners');
+      }
+
+      // Check if data exists and has documents
+      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+        return _buildPlaceholderBanner();
+      }
+
+      final docs = snapshot.data!.docs;
+      
+      // Safely extract banner URLs with null safety
+      final urls = <String>[];
+      
+      for (final doc in docs) {
+        final data = doc.data() as Map<String, dynamic>?;
+        if (data != null) {
+          // Check each banner field individually
+          for (int i = 1; i <= 2; i++) {
+            final bannerField = 'banner$i';
+            final bannerUrl = data[bannerField] as String?;
+            if (bannerUrl != null && bannerUrl.isNotEmpty) {
+              urls.add(bannerUrl);
+            }
+          }
         }
+      }
 
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return _buildBannerShimmer();
-        }
+      // Alternative approach using the same pattern but more concise:
+      // final urls = docs
+      //     .map((doc) => doc.data() as Map<String, dynamic>?)
+      //     .where((data) => data != null)
+      //     .expand((data) => [
+      //           data!['banner1'] as String?,
+      //           data['banner2'] as String?,
+      //         ])
+      //     .whereType<String>()
+      //     .where((url) => url.isNotEmpty)
+      //     .toList();
 
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return _buildPlaceholderBanner();
-        }
+      if (urls.isEmpty) {
+        return _buildPlaceholderBanner();
+      }
 
-        final docs = snapshot.data!.docs;
-        final urls = docs
-            .expand((doc) => [
-                  doc['banner1'] as String?,
-                  doc['banner2'] as String?,
-                ])
-            .whereType<String>()
-            .where((u) => u.isNotEmpty)
-            .toList();
-
-        if (urls.isEmpty) {
-          return _buildPlaceholderBanner();
-        }
-
-        return CarouselSlider.builder(
-          itemCount: urls.length,
-          options: CarouselOptions(
-            height: 210,
-            autoPlay: true,
-            enlargeCenterPage: true,
-            viewportFraction: 0.97,
-            autoPlayInterval: const Duration(seconds: 4),
+      return CarouselSlider.builder(
+        itemCount: urls.length,
+        options: CarouselOptions(
+          height: 210,
+          autoPlay: true,
+          enlargeCenterPage: true,
+          viewportFraction: 0.97,
+          autoPlayInterval: const Duration(seconds: 4),
+        ),
+        itemBuilder: (_, idx, __) => ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: CachedNetworkImage(
+            imageUrl: urls[idx],
+            fit: BoxFit.cover,
+            width: double.infinity,
+            placeholder: (_, __) => _buildBannerShimmer(),
+            errorWidget: (_, __, ___) => _buildPlaceholderBanner(),
           ),
-          itemBuilder: (_, idx, __) => ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: CachedNetworkImage(
-              imageUrl: urls[idx],
-              fit: BoxFit.cover,
-              width: double.infinity,
-              placeholder: (_, __) => _buildBannerShimmer(),
-              errorWidget: (_, __, ___) => _buildPlaceholderBanner(),
-            ),
-          ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 
   Widget _buildBannerShimmer() {
     return Shimmer.fromColors(
