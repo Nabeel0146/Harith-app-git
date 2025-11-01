@@ -160,7 +160,7 @@ $footer
               children: [
                 const SizedBox(width: 15),
                 ClipRRect(
-                  child: Image.asset("asset/onshopnewcurvedlogo.png", width: 50),
+                  child: Image.asset("assets/onshopnewcurvedlogo.png", width: 50),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -343,7 +343,7 @@ $footer
                                                         _makeCall(phone);
                                                       },
                                                       child: Image.asset(
-                                                        "asset/phone-call.png",
+                                                        "assets/phone-call.png",
                                                         width: 20,
                                                       ),
                                                     ),
@@ -354,7 +354,7 @@ $footer
                                                           _openWhatsApp(whatsapp);
                                                         },
                                                         child: Image.asset(
-                                                          "asset/whatsapp2.png",
+                                                          "assets/whatsapp2.png",
                                                           width: 20,
                                                         ),
                                                       ),
@@ -382,7 +382,7 @@ $footer
                                                         }
                                                       },
                                                       child: Image.asset(
-                                                        "asset/share2.png",
+                                                        "assets/share2.png",
                                                         width: 20,
                                                       ),
                                                     ),

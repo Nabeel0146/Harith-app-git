@@ -20,75 +20,119 @@ class _HomePageState extends State<HomePage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   /* ---------- AppBar with Drawer ---------- */
-  PreferredSizeWidget get appBar {
-    return PreferredSize(
-      preferredSize: const Size.fromHeight(147),
-      child: AppBar(
-        backgroundColor: const Color.fromARGB(255, 116, 190, 119),
-        elevation: 0,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(22)),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.menu, color: Colors.white, size: 28),
-          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-        ),
-        flexibleSpace: SafeArea(
-          child: Padding(
-            padding:
-                const EdgeInsets.only(left: 16, right: 16, top: 20, bottom: 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Image.asset('assets/harithagramamlogowhite.png',
-                        height: 48, errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        height: 48,
-                        width: 48,
-                        color: Colors.white,
-                        child: const Icon(Icons.error),
+ /* ---------- AppBar with Drawer ---------- */
+PreferredSizeWidget get appBar {
+  return PreferredSize(
+    preferredSize: const Size.fromHeight(147),
+    child: AppBar(
+      backgroundColor: const Color.fromARGB(255, 116, 190, 119),
+      elevation: 0,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(22)),
+      ),
+      leading: IconButton(
+        icon: const Icon(Icons.menu, color: Colors.white, size: 28),
+        onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+      ),
+      flexibleSpace: SafeArea(
+        child: Padding(
+          padding:
+              const EdgeInsets.only(left: 16, right: 16, top: 20, bottom: 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Image.asset('assets/harithagramamlogowhite.png',
+                      height: 48, errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      height: 48,
+                      width: 48,
+                      color: Colors.white,
+                      child: const Icon(Icons.error),
+                    );
+                  }),
+                  const SizedBox(width: 8),
+                  StreamBuilder<DocumentSnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('harith-users')
+                        .doc(FirebaseAuth.instance.currentUser?.uid)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Welcome',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold)),
+                            Text('Harithagramam App',
+                                style: TextStyle(
+                                    color: Colors.white70, fontSize: 12)),
+                          ],
+                        );
+                      }
+
+                      if (snapshot.hasError || !snapshot.hasData || !snapshot.data!.exists) {
+                        return const Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Welcome',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold)),
+                            Text('Harithagramam App',
+                                style: TextStyle(
+                                    color: Colors.white70, fontSize: 12)),
+                          ],
+                        );
+                      }
+
+                      final userData = snapshot.data!.data() as Map<String, dynamic>;
+                      final userName = userData['fullName'] as String? ?? 'User';
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Welcome $userName',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold)),
+                          const Text('Harithagramam App',
+                              style: TextStyle(
+                                  color: Colors.white70, fontSize: 12)),
+                        ],
                       );
-                    }),
-                    const SizedBox(width: 8),
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Harithagramam App',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold)),
-                        Text('Your village, greener than ever',
-                            style:
-                                TextStyle(color: Colors.white70, fontSize: 12)),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Search...',
-                    filled: true,
-                    fillColor: Colors.white,
-                    contentPadding:
-                        const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(24),
-                      borderSide: BorderSide.none,
-                    ),
-                    prefixIcon: const Icon(Icons.search, color: Colors.green),
+                    },
                   ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                decoration: InputDecoration(
+                  hintText: 'Search...',
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding:
+                      const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: BorderSide.none,
+                  ),
+                  prefixIcon: const Icon(Icons.search, color: Colors.green),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   /* ---------- Sidebar Drawer ---------- */
   Widget _buildDrawer() {
@@ -508,7 +552,7 @@ class _HomePageState extends State<HomePage> {
               crossAxisCount: 5,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
-              childAspectRatio: 0.75,
+              childAspectRatio: 0.70,
             ),
             itemCount: cats.length,
             itemBuilder: (_, idx) {
@@ -560,9 +604,9 @@ class _HomePageState extends State<HomePage> {
                       const SizedBox(height: 5),
                       Text(
                         cat['name']!,
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 10),
+                        style: const TextStyle(fontSize: 9),
                         textAlign: TextAlign.center,
                       ),
                     ],

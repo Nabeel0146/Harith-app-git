@@ -99,7 +99,7 @@ class AllProductsPage extends StatelessWidget {
                   crossAxisCount: 5,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
-                  childAspectRatio: 0.75,
+                  childAspectRatio: 0.70,
                 ),
                 itemCount: cats.length,
                 itemBuilder: (_, idx) {
@@ -157,9 +157,9 @@ class AllProductsPage extends StatelessWidget {
                           const SizedBox(height: 5),
                           Text(
                             cat['name']!,
-                            maxLines: 1,
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 10),
+                            style: const TextStyle(fontSize: 9),
                             textAlign: TextAlign.center,
                           ),
                         ],

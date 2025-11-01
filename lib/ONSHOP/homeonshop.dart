@@ -1,34 +1,26 @@
-
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:carousel_slider/carousel_slider.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:harithapp/ONSHOP/ONSHOP/Pages/Hospitals/hospitalcategory.dart';
 import 'package:harithapp/ONSHOP/ONSHOP/Pages/screens/Products/99deals.dart';
 import 'package:harithapp/ONSHOP/ONSHOP/Pages/screens/Products/Productspage.dart';
 import 'package:harithapp/ONSHOP/ONSHOP/Pages/screens/Products/singleproductpage.dart';
-import 'package:harithapp/ONSHOP/ONSHOP/Pages/screens/jobs/jobs.dart';
-import 'package:harithapp/ONSHOP/ONSHOP/Pages/screens/subcategory_page.dart';
-import 'package:harithapp/ONSHOP/ONSHOP/Pages/utils/appbar.dart' show CustomAppBar;
+import 'package:harithapp/ONSHOP/ONSHOP/Pages/screens/searchresults.dart';
+import 'package:harithapp/ONSHOP/ONSHOP/Pages/utils/appbar.dart';
 import 'package:harithapp/ONSHOP/ONSHOP/Pages/utils/sidebar.dart';
 import 'package:harithapp/ONSHOP/ONSHOP/Pages/widgets/widgets.dart';
 import 'package:in_app_update/in_app_update.dart';
-
 import 'package:shimmer/shimmer.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class HomePage extends StatefulWidget {
-
-  const HomePage({super.key});
-
   @override
   _HomePageState createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-  late FirebaseFirestore firestore;
   String? bannerImageUrl;
   String? selectedCity;
   List<String> cities = [];
@@ -36,7 +28,6 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-     firestore = FirebaseFirestore.instance;
     _loadInitialData();
     _checkForUpdate(); // Check for updates
   }
@@ -110,7 +101,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _fetchBannerImage() async {
     try {
-      final snapshot = await firestore
+      final snapshot = await FirebaseFirestore.instance
           .collection('Homepage_banner')
           .doc('banner')
           .get();
@@ -155,94 +146,390 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Widget buildBanner(List<String> bannerImages) {
-    if (bannerImages.isNotEmpty) {
-      return CarouselSlider(
-        options: CarouselOptions(
-          height: 190,
-          viewportFraction: 1,
-          enableInfiniteScroll: true,
-          autoPlay: true,
-          autoPlayInterval: const Duration(seconds: 3),
-          autoPlayAnimationDuration: const Duration(milliseconds: 800),
-          enlargeCenterPage: true,
+ 
+Widget buildBanner(List<String> bannerImages) {
+  final ValueNotifier<int> currentIndex = ValueNotifier<int>(0);
+  final PageController pageController = PageController();
+
+  if (bannerImages.isNotEmpty) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        CarouselSlider(
+          items: bannerImages.map((imageUrl) {
+            return Builder(
+              builder: (BuildContext context) {
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(0),
+                  child: Image.network(
+                    imageUrl,
+                    width: double.infinity,
+                    fit: BoxFit.fitWidth,
+                  ),
+                );
+              },
+            );
+          }).toList(),
+          options: CarouselOptions(
+            height: 190,
+            viewportFraction: 1.0,
+            enableInfiniteScroll: true,
+            autoPlay: true,
+            autoPlayInterval: const Duration(seconds: 3),
+            autoPlayAnimationDuration: const Duration(milliseconds: 800),
+            enlargeCenterPage: false,
+            onPageChanged: (index, reason) {
+              currentIndex.value = index;
+            },
+          ),
         ),
-        items: bannerImages.map((imageUrl) {
-          return Builder(
-            builder: (BuildContext context) {
-              return ClipRRect(
-                borderRadius:
-                    BorderRadius.circular(0), // No rounded corners for banners
-                child: CachedNetworkImage(
-                  imageUrl: imageUrl,
-                  width: double.infinity,
-                  fit: BoxFit
-                      .fitWidth, // Ensure the image fits the width without being cut off
-                  placeholder: (context, url) => Shimmer.fromColors(
-                    baseColor: Colors.grey[300]!,
-                    highlightColor: Colors.grey[100]!,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                      ),
+        const SizedBox(height: 10),
+        ValueListenableBuilder<int>(
+          valueListenable: currentIndex,
+          builder: (context, index, _) {
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: bannerImages.asMap().entries.map((entry) {
+                return GestureDetector(
+                  onTap: () {
+                    pageController.animateToPage(
+                      entry.key,
+                      duration: const Duration(milliseconds: 800),
+                      curve: Curves.ease,
+                    );
+                  },
+                  child: Container(
+                    width: 6.0,
+                    height: 6.0,
+                    margin: const EdgeInsets.symmetric(horizontal: 4.0),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: index == entry.key
+                          ? Colors.black
+                          : Colors.grey[400],
                     ),
                   ),
-                  errorWidget: (context, url, error) => Shimmer.fromColors(
-                    baseColor: Colors.grey[300]!,
-                    highlightColor: Colors.grey[100]!,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                      ),
+                );
+              }).toList(),
+            );
+          },
+        ),
+      ],
+    );
+  } else {
+    // Show empty shimmer-like placeholder layout
+    return SizedBox(
+      height: 190,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: 3,
+        itemBuilder: (context, index) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Container(
+              width: MediaQuery.of(context).size.width,
+              height: 190,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+  Widget _buildFridayBazaarSection() {
+  return FutureBuilder<List<Map<String, dynamic>>>(
+    future: fetchFridayBazaarItems(),
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return const Center(child: CircularProgressIndicator());
+      }
+
+      if (snapshot.hasError) {
+        return Center(child: Text('Error: ${snapshot.error}'));
+      }
+
+      final items = snapshot.data ?? [];
+
+      // Check if today is Friday
+      final isFriday = DateTime.now().weekday == DateTime.friday;
+
+      if (!isFriday || items.isEmpty) {
+        return const Center(
+        );
+      }
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Column(
+              children: [
+                Text(
+                  "Friday Bazaar",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                Divider()
+              ],
+            ),
+          ),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+              childAspectRatio: 0.55, // Adjust this value to give more height to each grid item
+            ),
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              final item = items[index];
+              return GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => SingleProductPage(product: item),
+                    ),
+                  );
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: Colors.grey, // You can change the border color as needed
+                      width: 0.5, // Set the border width to 0.5
+                    ),
+                    borderRadius: BorderRadius.circular(8), // Optional: Add rounded corners
+                  ),
+                  child: Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (item['image_url'] != null && item['image_url'].toString().isNotEmpty)
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: AspectRatio(
+                                    aspectRatio: 4 / 4,
+                                    child: CachedNetworkImage(
+                                      imageUrl: item['image_url'],
+                                      fit: BoxFit.cover,
+                                      placeholder: (context, url) =>
+                                          Container(
+                                            color: Colors.grey[300],
+                                            child: const Center(
+                                              child: CircularProgressIndicator(),
+                                            ),
+                                          ),
+                                      errorWidget: (context, url, error) =>
+                                          Container(
+                                            color: Colors.grey[300],
+                                            child: const Icon(Icons.error),
+                                          ),
+                                    ),
+                                  ),
+                                )
+                              else
+                                AspectRatio(
+                                  aspectRatio: 3 / 3,
+                                  child: Container(
+                                    color: Colors.grey[300],
+                                    child: const Icon(Icons.image_not_supported),
+                                  ),
+                                ),
+                              const SizedBox(height: 8),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                                child: Text(
+                                  item['name'] ?? 'No Name',
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                                child: Container(
+                                  padding: const EdgeInsets.only(left: 6.0, right: 6, top: 2, bottom: 2),
+                                  child: Text(
+                                    item['description'] ?? 'No Description',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: Color.fromARGB(255, 107, 160, 107),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                                child: Text(
+                                  'MRP ₹${item['price'] ?? 'N/A'}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    decoration: TextDecoration.lineThrough,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 1),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                                child: Text(
+                                  '₹${item['discountedprice'] ?? 'N/A'}',
+                                  style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 1.0, vertical: 2.0),
+                          child: ElevatedButton(
+                            onPressed: () {
+                              if (item['whatsappnumber'] != null) {
+                                _openWhatsApp(
+                                  item['whatsappnumber'],
+                                  item['name'] ?? 'No Name',
+                                  item['price'] ?? 0,
+                                  item['discountedprice'] ?? 0,
+                                  item['description'] ?? 'No Description',
+                                );
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Image.asset(
+                                  'asset/whatsapp.png',
+                                  width: 16,
+                                  height: 16,
+                                ),
+                                const SizedBox(width: 2),
+                                const Text(
+                                  'Order on Whatsapp',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               );
             },
-          );
-        }).toList(),
+          ),
+        ],
       );
+    },
+  );
+}
+
+  Future<List<Map<String, dynamic>>> fetchFridayBazaarItems() async {
+    try {
+      print('Fetching Friday Bazaar items...');
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('products')
+          .where('fridaybazaar', isEqualTo: true)
+          .where('display', isEqualTo: true)
+          .get();
+
+      print('Number of items fetched: ${querySnapshot.docs.length}');
+      return querySnapshot.docs
+          .map((doc) => doc.data() as Map<String, dynamic>)
+          .toList();
+    } catch (e) {
+      print('Error fetching items: $e');
+      return [];
+    }
+  }
+
+  Future<void> _openWhatsApp(String phoneNumber, String productName, int price,
+      int discountedPrice, String description) async {
+    final userAddress = await getUserAddress();
+    final formattedPhoneNumber = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
+    final productDetails = """
+  Name: $productName
+  Price: ₹$price
+  Discounted Price: ₹$discountedPrice
+  Description: $description
+  Address: $userAddress
+  """;
+
+    final uri = Uri.parse(
+        'https://wa.me/$formattedPhoneNumber?text=${Uri.encodeComponent(productDetails)}');
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
-      return SizedBox(
-        height: 150,
-        child: ListView.builder(
-          scrollDirection: Axis.horizontal,
-          itemCount: 3, // Number of shimmer placeholders to show
-          itemBuilder: (context, index) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: Shimmer.fromColors(
-                baseColor: Colors.grey[300]!,
-                highlightColor: Colors.grey[100]!,
-                child: Container(
-                  width: MediaQuery.of(context)
-                      .size
-                      .width, // Full width of the screen
-                  height: 150,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open WhatsApp for $phoneNumber')),
       );
+    }
+  }
+
+  Future<String> getUserAddress() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        return 'No address provided';
+      }
+
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      if (!userDoc.exists) {
+        return 'No address provided';
+      }
+
+      return userDoc.data()?['address'] ?? 'No address provided';
+    } catch (e) {
+      print('Error fetching user address: $e');
+      return 'No address provided';
     }
   }
 
   Future<void> _fetchCities() async {
     try {
       final cityDocs =
-          await firestore.collection('cities').get();
+          await FirebaseFirestore.instance.collection('cities').get();
       final cityNames =
           cityDocs.docs.map((doc) => doc['name'] as String).toList();
 
       final userId = FirebaseAuth.instance.currentUser?.uid;
       if (userId == null) return;
 
-      final userSnapshot = await firestore
+      final userSnapshot = await FirebaseFirestore.instance
           .collection('users')
           .doc(userId)
           .get();
@@ -259,10 +546,10 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _navigateToSearchResults() {
-    // Navigator.push(
-    //   context,
-    //   MaterialPageRoute(builder: (context) => SearchResultsPage()),
-    // );
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => SearchResultsPage()),
+    );
   }
 
   @override
@@ -285,23 +572,14 @@ class _HomePageState extends State<HomePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildSearchButton(),
-            const SizedBox(height: 10),
 
+             
             buildBanner(bannerImages),
             const SizedBox(height: 26),
             _buildProductCategories(), // New section for scrollable rectangles
-            const SizedBox(height: 26),
-            _buildCategoryTiles(),
-            const SizedBox(height: 16),
+            const SizedBox(height: 2),
             Padding(
-              padding: const EdgeInsets.only(left: 10.0, right: 10),
-              child: _buildOtherCategories(),
-            ),
-            const SizedBox(height: 30),
-            _buildAdsSection(),
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.only(left:8.0, right: 8, bottom: 20),
               child: GestureDetector(
                 onTap: () {
                   // Navigate to 99deals page
@@ -311,16 +589,25 @@ class _HomePageState extends State<HomePage> {
                           builder: (context) => NinetyNineDealsPage()));
                 },
                 child: Image.asset(
-                  'assets/99deals.png', // Replace with your actual image path
+                  'asset/99deals.png', // Replace with your actual image path
                   width: double.infinity, // Make the image take full width
                   // Adjust the height as needed
                   fit: BoxFit.fitHeight,
                 ),
               ),
             ),
+
+            _buildCategoryTiles(),
+            const SizedBox(height: 16),
+          
+            _buildAdsSection(),
+            const SizedBox(height: 10),
+           
+            _buildFridayBazaarSection(), // Add the Friday Bazaar section here
+            const SizedBox(height: 10),
             Padding(
               padding: const EdgeInsets.all(8.0),
-              child: _buildProductsSection(),
+              child: _buildProductsSection(context),
             )
           ],
         ),
@@ -328,95 +615,122 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildAdsSection() {
-    return FutureBuilder<DocumentSnapshot>(
-      future:
-          firestore.collection('homepageads').doc('ads').get(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (!snapshot.hasData ||
-            snapshot.data == null ||
-            snapshot.data!.data() == null) {
-          return const Center(child: Text("No ads available"));
-        }
+  
+Widget _buildAdsSection() {
+  final ValueNotifier<int> currentAdIndex = ValueNotifier<int>(0);
 
-        // Extract ads and filter out null/empty values
-        Map<String, dynamic> data =
-            snapshot.data!.data() as Map<String, dynamic>;
-        List<String> adImages = [
-          for (int i = 1; i <= 30; i++) data['ad$i'] as String?,
-        ].where((url) => url != null && url.isNotEmpty).cast<String>().toList();
+  return FutureBuilder<DocumentSnapshot>(
+    future: FirebaseFirestore.instance.collection('homepageads').doc('ads').get(),
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return const Center(child: CircularProgressIndicator());
+      }
 
-        if (adImages.isEmpty) {
-          return const Center(child: Text("No ads available"));
-        }
+      if (!snapshot.hasData || snapshot.data == null || snapshot.data!.data() == null) {
+        return const Center(child: Text("No ads available"));
+      }
 
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                "Sponsored Ads",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              CarouselSlider.builder(
-                itemCount: adImages.length,
-                options: CarouselOptions(
-                  height:
-                      380, // Adjusted height to match the previous reference
-                  viewportFraction: 1, // Adjusts width for square images
-                  enableInfiniteScroll: true,
-                  autoPlay: true,
-                  autoPlayInterval: const Duration(seconds: 3),
-                  autoPlayAnimationDuration: const Duration(milliseconds: 800),
-                  enlargeCenterPage: true,
-                ),
-                itemBuilder: (context, index, realIndex) {
-                  return ClipRRect(
-                    borderRadius: BorderRadius.circular(10), // Rounded corners
-                    child: CachedNetworkImage(
-                      imageUrl: adImages[index],
-                      fit: BoxFit
-                          .contain, // Ensure the image fits within the container without being cut off
-                      placeholder: (context, url) => Shimmer.fromColors(
-                        baseColor: Colors.grey[300]!,
-                        highlightColor: Colors.grey[100]!,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                      ),
-                      errorWidget: (context, url, error) => Shimmer.fromColors(
-                        baseColor: Colors.grey[300]!,
-                        highlightColor: Colors.grey[100]!,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
+      Map<String, dynamic> data = snapshot.data!.data() as Map<String, dynamic>;
+
+      List<String> adImages = [
+        for (int i = 1; i <= 30; i++) data['ad$i'] as String?,
+      ].where((url) => url != null && url.isNotEmpty).cast<String>().toList();
+
+      if (adImages.isEmpty) {
+        return const Center(child: Text("No ads available"));
+      }
+
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Sponsored Ads",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            CarouselSlider.builder(
+              itemCount: adImages.length,
+              itemBuilder: (context, index, realIndex) {
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: CachedNetworkImage(
+                    imageUrl: adImages[index],
+                    fit: BoxFit.contain,
+                    placeholder: (context, url) => Shimmer.fromColors(
+                      baseColor: Colors.grey[300]!,
+                      highlightColor: Colors.grey[100]!,
+                      child: Container(
+                        height: 380,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
                         ),
                       ),
                     ),
-                  );
+                    errorWidget: (context, url, error) => Shimmer.fromColors(
+                      baseColor: Colors.grey[300]!,
+                      highlightColor: Colors.grey[100]!,
+                      child: Container(
+                        height: 380,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+              options: CarouselOptions(
+                height: 380,
+                viewportFraction: 1,
+                enableInfiniteScroll: true,
+                autoPlay: true,
+                autoPlayInterval: const Duration(seconds: 3),
+                autoPlayAnimationDuration: const Duration(milliseconds: 800),
+                enlargeCenterPage: true,
+                onPageChanged: (index, reason) {
+                  currentAdIndex.value = index;
                 },
               ),
-              const SizedBox(height: 10),
-            ],
-          ),
-        );
-      },
-    );
-  }
+            ),
+            const SizedBox(height: 10),
+            ValueListenableBuilder<int>(
+              valueListenable: currentAdIndex,
+              builder: (context, index, _) {
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: adImages.asMap().entries.map((entry) {
+                    return Container(
+                      width: 6.0,
+                      height: 6.0,
+                      margin: const EdgeInsets.symmetric(horizontal: 3.0),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: index == entry.key
+                            ? Colors.black
+                            : Colors.grey[400],
+                      ),
+                    );
+                  }).toList(),
+                );
+              },
+            ),
+            const SizedBox(height: 10),
+          ],
+        ),
+      );
+    },
+  );
+}
 
   Widget _buildProductCategories() {
     return FutureBuilder<QuerySnapshot>(
-      future: firestore.collection('productcategories').get(),
+      future: FirebaseFirestore.instance.collection('productcategories').get(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return SizedBox(
@@ -534,7 +848,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildSearchButton() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
       child: ElevatedButton(
         onPressed: _navigateToSearchResults,
         style: ElevatedButton.styleFrom(
@@ -575,433 +889,279 @@ class _HomePageState extends State<HomePage> {
               context,
               'Shops',
               'Find Product Stores',
-              'assets/onshoplogofinal.png',
+              'assets/onsapplogo.jpg',
               Colors.red,
               'shopcategories',
             ),
-            buildLargeCategoryTile(
-              context,
-              'Services',
-              'Find Service Stores',
-              'assets/serviceicon.png',
-              Colors.red,
-              'servicecategories',
-            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildOtherCategories() {
-    return Container(
-      color: Colors.grey[200],
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Other Categories",
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 8),
-            GridView(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
-              ),
-              children: [
-                buildSmallCategoryTile(
-                  context,
-                  'Workers',
-                  'assets/labour-day.png',
-                  'workerscategories',
-                ),
-                buildSmallCategoryTile(
-                  context,
-                  'Hello Taxi',
-                  'assets/taxi.png',
-                  'taxicategories',
-                ),
-                buildSmallCategoryTile(
-                  context,
-                  'Hospitals',
-                  'assets/medicine.png',
-                  'hospitalcategories',
-                ),
-                buildSmallCategoryTile(
-                  context,
-                  'Job Vacancy',
-                  'assets/suitcase.png',
-                  '',
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-          ],
-        ),
-      ),
-    );
-  }
+ 
 
-  Widget buildSmallCategoryTile(BuildContext context, String title,
-    String assetsImagePath, String collectionName) {
+ Widget buildSmallCategoryTile(
+    BuildContext context, String name, String imageUrl, Widget page) {
   return GestureDetector(
     onTap: () {
-      if (title == 'Job Vacancy') {
-        // Navigate to the JobsListingPage when "Jobs" is clicked
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => JobsListingPage(),
-          ),
-        );
-      } else if (title == 'Hospitals') {
-        // Navigate to the HospitalsPage when "Hospitals" is clicked
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => HospitalsPage(),
-          ),
-        );
-      } else {
-        // Otherwise, navigate to the SubcategoryGridPage
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>
-                SubcategoryGridPage(collectionName: collectionName),
-          ),
-        );
-      }
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => page),
+      );
     },
     child: Container(
+      width: 75,
+      height: 75,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.white, // White background for the small category tiles
         borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.3),
-            spreadRadius: 2,
-            blurRadius: 5,
-            offset: Offset(0, 3), // Shadow position
-          ),
-        ],
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Image.asset(
-            assetsImagePath,
-            height: 30, // Adjust size as needed
-            width: 30,
+            imageUrl,
+            width: 75,
+            height: 75,
+            fit: BoxFit.cover,
           ),
-          SizedBox(height: 5),
-          Padding(
-            padding: const EdgeInsets.only(right:3, left: 3),
-            child: Text(
-              title,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: Colors.black87,
-                fontWeight: FontWeight.w500,
-                fontSize: 12,
-              ),
-            ),
-          ),
+          const SizedBox(height: 1),
+          // Text(
+          //   name,
+          //   style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
+          //   textAlign: TextAlign.center,
+          // ),
+          SizedBox(
+            height: 2,
+          )
         ],
       ),
     ),
   );
 }
 
-  Widget _buildProductsSection() {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: _fetchAllProducts(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+  Widget _buildProductsSection(BuildContext context) {
+  return FutureBuilder<List<Map<String, dynamic>>>(
+    future: _fetchAllProducts(),
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return const Center(child: CircularProgressIndicator());
+      }
 
-        if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        }
+      if (snapshot.hasError) {
+        return Center(child: Text('Error: ${snapshot.error}'));
+      }
 
-        final items = snapshot.data ?? [];
+      final items = snapshot.data ?? [];
 
-        if (items.isEmpty) {
-          return const Center(
-            child: Text('No items found.',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          );
-        }
+      if (items.isEmpty) {
+        return const Center(
+          child: Text('No items found.',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        );
+      }
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: Column(
-                children: [
-                  Text(
-                    "Featured Products",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  Divider()
-                ],
-              ),
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Column(
+              children: const [
+                Text(
+                  "Featured Products",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                Divider()
+              ],
             ),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
-                childAspectRatio:
-                    0.55, // Adjust this value to give more height to each grid item
-              ),
-              itemCount: items.length,
-              itemBuilder: (context, index) {
-                final item = items[index];
-                return GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => SingleProductPage(product: item),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: Colors
-                            .grey, // You can change the border color as needed
-                        width: 0.5, // Set the border width to 0.5
-                      ),
-                      borderRadius: BorderRadius.circular(
-                          8), // Optional: Add rounded corners
+          ),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+              childAspectRatio: 0.55,
+            ),
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              final item = items[index];
+              return GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => SingleProductPage(product: item),
                     ),
-                    child: Card(
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                if (item['image_url'] != null &&
-                                    item['image_url'].toString().isNotEmpty)
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: AspectRatio(
-                                      aspectRatio: 4 / 4,
-                                      child: CachedNetworkImage(
-                                        imageUrl: item['image_url'],
-                                        fit: BoxFit.cover,
-                                        placeholder: (context, url) =>
-                                            Container(
-                                          color: Colors.grey[300],
-                                          child: const Center(
-                                            child: CircularProgressIndicator(),
-                                          ),
-                                        ),
-                                        errorWidget: (context, url, error) =>
-                                            Container(
-                                          color: Colors.grey[300],
-                                          child: const Icon(Icons.error),
+                  );
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey, width: 0.5),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (item['image_url'] != null &&
+                                  item['image_url'].toString().isNotEmpty)
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: AspectRatio(
+                                    aspectRatio: 4 / 4,
+                                    child: CachedNetworkImage(
+                                      imageUrl: item['image_url'],
+                                      fit: BoxFit.cover,
+                                      placeholder: (context, url) => Container(
+                                        color: Colors.grey[300],
+                                        child: const Center(
+                                          child: CircularProgressIndicator(),
                                         ),
                                       ),
-                                    ),
-                                  )
-                                else
-                                  AspectRatio(
-                                    aspectRatio: 3 / 3,
-                                    child: Container(
-                                      color: Colors.grey[300],
-                                      child:
-                                          const Icon(Icons.image_not_supported),
+                                      errorWidget: (context, url, error) =>
+                                          Container(
+                                        color: Colors.grey[300],
+                                        child: const Icon(Icons.error),
+                                      ),
                                     ),
                                   ),
-                                const SizedBox(height: 8),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8.0),
-                                  child: Text(
-                                    item['name'] ?? 'No Name',
-                                    overflow: TextOverflow.ellipsis,
-                                    maxLines: 1,
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 2.0),
+                                )
+                              else
+                                AspectRatio(
+                                  aspectRatio: 3 / 3,
                                   child: Container(
-                                    padding: const EdgeInsets.only(
-                                        left: 6.0, right: 6, top: 2, bottom: 2),
-                                    child: Text(
-                                      item['description'] ?? 'No Description',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        color:
-                                            Color.fromARGB(255, 107, 160, 107),
-                                      ),
+                                    color: Colors.grey[300],
+                                    child:
+                                        const Icon(Icons.image_not_supported),
+                                  ),
+                                ),
+                              const SizedBox(height: 8),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                                child: Text(
+                                  item['name'] ?? 'No Name',
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                                child: Container(
+                                  padding: const EdgeInsets.only(
+                                      left: 6.0, right: 6, top: 2, bottom: 2),
+                                  child: Text(
+                                    item['description'] ?? 'No Description',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: Color.fromARGB(255, 107, 160, 107),
                                     ),
                                   ),
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8.0),
-                                  child: Text(
-                                    'MRP ₹${item['price'] ?? 'N/A'}',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      decoration: TextDecoration.lineThrough,
-                                    ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                                child: Text(
+                                  'MRP ₹${item['price'] ?? 'N/A'}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    decoration: TextDecoration.lineThrough,
                                   ),
                                 ),
-                                const SizedBox(height: 1),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8.0),
-                                  child: Text(
-                                    '₹${item['discountedprice'] ?? 'N/A'}',
-                                    style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 1),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                                child: Text(
+                                  '₹${item['discountedprice'] ?? 'N/A'}',
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 1.0, vertical: 2.0),
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              if (item['whatsappnumber'] != null) {
+                                await _openWhatsApp(
+                                  item['whatsappnumber'],
+                                  item['name'] ?? 'No Name',
+                                  item['price'] ?? 0,
+                                  item['discountedprice'] ?? 0,
+                                  item['description'] ?? 'No Description',
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content: Text('WhatsApp number not found')),
+                                );
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Image.asset(
+                                  'asset/whatsapp.png',
+                                  width: 16,
+                                  height: 16,
+                                ),
+                                const SizedBox(width: 2),
+                                const Text(
+                                  'Order on Whatsapp',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 1.0, vertical: 2.0),
-                            child: ElevatedButton(
-                              onPressed: () {
-
-                               if (item['whatsappnumber'] != null) {
-                                            _openWhatsApp(
-                                              item['whatsappnumber'],
-                                              item['name'] ?? 'No Name',
-                                              item['price'] ?? 0,
-                                              item['discountedprice'] ?? 0,
-                                              item['description'] ??
-                                                  'No Description',
-                                            );
-                                          }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize:
-                                    MainAxisSize.min, // Wrap content tightly
-                                children: [
-                                  Image.asset(
-                                    'assets/whatsapp.png',
-                                    width: 16,
-                                    height: 16,
-                                  ),
-                                  const SizedBox(width: 2),
-                                  const Text(
-                                    'Order on Whatsapp',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 11,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
-                );
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<String> getUserAddress() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return 'No address provided';
-
-      final snap = await firestore
-          .collection('users')
-          .doc(user.uid)
-          .get();
-      if (!snap.exists) return 'No address provided';
-
-      return snap.data()?['address'] ?? 'No address provided';
-    } catch (e) {
-      print('Error fetching address: $e');
-      return 'No address provided';
-    }
-  }
-  
-   Future<void> _openWhatsApp(
-    String phoneNumber,
-    String productName,
-    int price,
-    int discountedPrice,
-    String description,
-  ) async {
-    final address = await getUserAddress();
-    final cleanNumber = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
-    final text = '''
-Name: $productName
-Price: ₹$price
-Discounted Price: ₹$discountedPrice
-Description: $description
-Address: $address
-''';
-    final uri = Uri.parse(
-        'https://wa.me/$cleanNumber?text=${Uri.encodeComponent(text)}');
-
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not open WhatsApp for $phoneNumber')),
+                ),
+              );
+            },
+          ),
+        ],
       );
-    }
-  }
-
+    },
+  );
+}
 
   Future<List<Map<String, dynamic>>> _fetchAllProducts() async {
     try {
-      final querySnapshot = await firestore
+      final querySnapshot = await FirebaseFirestore.instance
           .collection('products')
           .where('display', isEqualTo: true)
           .get();

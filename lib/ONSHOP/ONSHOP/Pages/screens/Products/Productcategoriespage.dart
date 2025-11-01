@@ -52,7 +52,7 @@ class ProductCategoriesPage extends StatelessWidget {
               children: [
                 const SizedBox(width: 15),
                 ClipRRect(
-                  child: Image.asset("asset/onshopnewcurvedlogo.png", width: 50),
+                  child: Image.asset("assets/onshopnewcurvedlogo.png", width: 50),
                 ),
                 const SizedBox(width: 10),
                 Expanded(

@@ -168,7 +168,7 @@ Widget buildLargeCategoryTile(BuildContext context, String title,
       );
     },
     child: Container(
-      width: MediaQuery.of(context).size.width * 0.45, // Large size
+      width: MediaQuery.of(context).size.width * 0.90, // Large size
       height: 120,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 15),
       decoration: BoxDecoration(
@@ -177,7 +177,7 @@ Widget buildLargeCategoryTile(BuildContext context, String title,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.4), // Light shadow
+            color: const Color.fromARGB(255, 255, 225, 0).withOpacity(0.4), // Light shadow
             spreadRadius: 1,
             blurRadius: 5,
             offset: Offset(0, 3), // Shadow direction

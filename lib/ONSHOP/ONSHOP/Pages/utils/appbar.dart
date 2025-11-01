@@ -51,7 +51,6 @@ class GradientAppBar extends StatelessWidget {
     );
   }
 }
-
 class AppBarContent extends StatelessWidget {
   final List<String> cities;
   final String? selectedCity;
@@ -122,51 +121,24 @@ class AppBarContent extends StatelessWidget {
                     );
                   }
 
-                  if (snapshot.hasError) {
-                    return const Text(
-                      "Error loading data",
-                      style: TextStyle(color: Colors.white),
-                    );
-                  }
+                 
 
-                  if (!snapshot.hasData || !snapshot.data!.exists) {
-                    return const Text(
-                      "User Not Found",
-                      style: TextStyle(color: Colors.white),
-                    );
-                  }
-
-                  final userData = snapshot.data!.data() as Map<String, dynamic>?;
-                  final userName = userData?['name'] as String? ?? 'Guest';
-                  final cardNo = userData?['cardno'] as String? ??
-                      "Contact Us to get the discount card!";
+                
 
                   return Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                     
                       const Text(
-                        "Hello!",
-                        style: TextStyle(color: Colors.black),
-                      ),
-                      Text(
-                        userName,
-                        style: const TextStyle(
+                        "Onshop",
+                        style: TextStyle(
                           color: Colors.black,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      Text(
-                        cardNo?.isNotEmpty == true
-                            ? 'Card No: $cardNo'
-                            : "Contact Us to get the discount card!",
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.bold,
-                          fontSize: cardNo?.isNotEmpty == true ? 13 : 10, // Set fontSize based on cardNo
-                        ),
-                      ),
+                     
                     ],
                   );
                 },

@@ -10,10 +10,7 @@ import 'package:harithapp/ONSHOP/ONSHOP/Pages/screens/subcategory_page.dart';
 import 'package:harithapp/ONSHOP/homeonshop.dart';
 
 class MainScreen extends StatefulWidget {
-  
-
-
-  const MainScreen({super.key,});
+  const MainScreen({super.key});
 
   @override
   _MainScreenState createState() => _MainScreenState();
@@ -106,6 +103,40 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(40), // Small height app bar
+        child: AppBar(
+          backgroundColor:Color.fromARGB(255, 116, 190, 119),
+          elevation: 1,
+          automaticallyImplyLeading: false,
+          title: GestureDetector(
+            onTap: () {
+              // Navigate back to Harithagramam
+              Navigator.of(context).pop();
+            },
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.arrow_back_ios,
+                  size: 16,
+                  color: Colors.black,
+                ),
+                const SizedBox(width: 4),
+                const Text(
+                  'Back to Harithagramam',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.black,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          centerTitle: true,
+        ),
+      ),
       body: PageView(
         controller: _pageController,
         onPageChanged: (index) => setState(() => _selectedIndex = index),
@@ -115,15 +146,15 @@ class _MainScreenState extends State<MainScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            Expanded(child: _buildNavItem('asset/home.png', 'Home', 0)),
+            Expanded(child: _buildNavItem('assets/home.png', 'Home', 0)),
             const VerticalDivider(width: .5, color: Color.fromARGB(255, 148, 148, 148)),
-            Expanded(child: _buildNavItem('asset/grocery.png', 'Categories', 1)),
+            Expanded(child: _buildNavItem('assets/grocery.png', 'Categories', 1)),
             const VerticalDivider(width: .5, color: Color.fromARGB(255, 148, 148, 148)),
-            Expanded(child: _buildNavItem('asset/online-shop.png', 'Shops', 2)),
+            Expanded(child: _buildNavItem('assets/online-shop.png', 'Shops', 2)),
             const VerticalDivider(width: .5, color: Color.fromARGB(255, 148, 148, 148)),
-            Expanded(child: _buildNavItem('asset/credit-card.png', 'DiscountCard', 3)),
+            Expanded(child: _buildNavItem('assets/credit-card.png', 'DiscountCard', 3)),
             const VerticalDivider(width: .5, color: Color.fromARGB(255, 148, 148, 148)),
-            Expanded(child: _buildNavItem('asset/friday.png', 'Friday Bazaar', 4)),
+            Expanded(child: _buildNavItem('assets/friday.png', 'Friday Bazaar', 4)),
           ],
         ),
       ),
