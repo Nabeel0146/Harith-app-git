@@ -3,6 +3,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:harithapp/Auth/register.dart';
 
+import 'package:harithapp/formals/help.dart';
+import 'package:harithapp/formals/privacypolicy.dart';
+import 'package:harithapp/formals/support.dart';
+import 'package:harithapp/formals/termsandconditions.dart';
+
 class ProfileScreen extends StatelessWidget {
   ProfileScreen({super.key});
 
@@ -141,7 +146,7 @@ Future<void> _signOut(BuildContext context) async {
                             if (membershipId != null)
                               Positioned(
                                 bottom: 78,
-                                left: 32,
+                                left: 23,
                                 child: Text(
                                     '$membershipId',
                                     style: const TextStyle(
@@ -294,18 +299,30 @@ Future<void> _signOut(BuildContext context) async {
         color: isLogout ? Colors.red : Colors.black54,
       ),
       onTap: () {
-        if (isLogout) {
-          _confirmSignOut(context);
-        } else {
-          // TODO: Navigation for other menu items
-          // You can implement navigation for other menu items here
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('$title feature coming soon!'),
-            ),
-          );
-        }
-      },
+  if (isLogout) {
+    _confirmSignOut(context);
+  } else {
+    // Navigate to respective pages
+    switch (title) {
+      case 'Privacy Policy':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => PrivacyPolicyPage()));
+        break;
+      case 'Terms & Conditions':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => TermsConditionsPage()));
+        break;
+      case 'Help':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => HelpPage()));
+        break;
+      case 'Support':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => SupportPage()));
+        break;
+      default:
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$title feature coming soon!')),
+        );
+    }
+  }
+},
     );
   }
 

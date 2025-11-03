@@ -425,6 +425,124 @@ Widget _buildBanner() {
     );
   }
 
+  /* ---------- Haritha Gramam Store Banner ---------- */
+Widget _buildHarithaGramamStoreBanner() {
+  return StreamBuilder<QuerySnapshot>(
+    stream: FirebaseFirestore.instance
+        .collection('appsettings')
+        .snapshots(),
+    builder: (context, snapshot) {
+      if (snapshot.hasError) {
+        print('Haritha Gramam Store Banner Error: ${snapshot.error}');
+        return const SizedBox.shrink();
+      }
+
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return _buildHarithaGramamStoreBannerShimmer();
+      }
+
+      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+        return const SizedBox.shrink();
+      }
+
+      final docs = snapshot.data!.docs;
+      
+      // Check if harithagramamstorebanner is true in any document
+      bool showStoreBanner = false;
+      for (var doc in docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        if (data['harithagramamstorebanner'] == true) {
+          showStoreBanner = true;
+          break;
+        }
+      }
+
+      if (!showStoreBanner) {
+        return const SizedBox.shrink();
+      }
+
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: const Color.fromARGB(255, 116, 190, 119),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.store,
+                    size: 32,
+                    color: Color.fromARGB(255, 116, 190, 119),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Haritha gramam Store Coming Soon!',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Haritha gramam stores are coming soon..',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+Widget _buildHarithaGramamStoreBannerShimmer() {
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    child: Shimmer.fromColors(
+      baseColor: Colors.grey[300]!,
+      highlightColor: Colors.grey[100]!,
+      child: Container(
+        width: double.infinity,
+        height: 80,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+      ),
+    ),
+  );
+}
+
   /* ---------- Category Grid ---------- */
   Widget _buildCategoryGrid() {
     return StreamBuilder<QuerySnapshot>(
@@ -860,6 +978,7 @@ Widget _buildBanner() {
             const SizedBox(height: 16),
             _buildCategoryGrid(),
             _buildOnShopBanner(), // Added OnShop banner between categories and featured products
+              _buildHarithaGramamStoreBanner(), // Add this line - NEW SECTION
             _buildPromoBanner(),
             _buildProducts(),
             _buildSponsoredAds(),

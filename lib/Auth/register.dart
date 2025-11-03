@@ -17,6 +17,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final _fullNameCtrl = TextEditingController();
   final _mobileCtrl = TextEditingController();
   final _referredByCtrl = TextEditingController(); // New controller for referred by field
+  final _deliveryAddressCtrl = TextEditingController(); // New controller for delivery address
 
   // Dropdown values
   String? _selectedPanchayath;
@@ -232,6 +233,7 @@ class _RegisterPageState extends State<RegisterPage> {
     _fullNameCtrl.dispose();
     _mobileCtrl.dispose();
     _referredByCtrl.dispose();
+    _deliveryAddressCtrl.dispose(); // Dispose the new controller
     super.dispose();
   }
 
@@ -285,6 +287,12 @@ class _RegisterPageState extends State<RegisterPage> {
         userData['referredBy'] = facilitatorCode; // Store in both fields for compatibility
       }
 
+      // Add delivery address if provided
+      final deliveryAddress = _deliveryAddressCtrl.text.trim();
+      if (deliveryAddress.isNotEmpty) {
+        userData['deliveryAddress'] = deliveryAddress;
+      }
+
       // Save user data to harith-users collection
       await FirebaseFirestore.instance.collection('harith-users').doc(uid).set(
         userData,
@@ -336,10 +344,11 @@ class _RegisterPageState extends State<RegisterPage> {
 
   /* ----------  UI helpers  ---------- */
   Widget _textField(String label, TextEditingController c,
-      {TextInputType kb = TextInputType.text, bool isOptional = false}) {
+      {TextInputType kb = TextInputType.text, bool isOptional = false, int maxLines = 1}) {
     return TextFormField(
       controller: c,
       keyboardType: kb,
+      maxLines: maxLines,
       decoration: InputDecoration(
         labelText: label + (isOptional ? ' (Optional)' : ''),
         filled: true,
@@ -430,6 +439,28 @@ class _RegisterPageState extends State<RegisterPage> {
         const SizedBox(height: 4),
         const Text(
           'Enter the facilitator code if someone referred you',
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.white70,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _deliveryAddressField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _textField(
+          'Delivery Address',
+          _deliveryAddressCtrl,
+          isOptional: true,
+          maxLines: 3,
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'Enter your complete delivery address for easier order delivery',
           style: TextStyle(
             fontSize: 12,
             color: Colors.white70,
@@ -613,8 +644,10 @@ class _RegisterPageState extends State<RegisterPage> {
                         _panchayathDropDown(),
                         const SizedBox(height: 16),
                         _wardDropDown(),
-                        const SizedBox(height:16),
-                         _referredByField(), // New referred by field
+                        const SizedBox(height: 16),
+                        _deliveryAddressField(), // New delivery address field
+                        const SizedBox(height: 16),
+                        _referredByField(), // Facilitator code field
                         const SizedBox(height: 16),
                         
                         ElevatedButton(
