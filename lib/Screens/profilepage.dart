@@ -146,7 +146,7 @@ Future<void> _signOut(BuildContext context) async {
                             if (membershipId != null)
                               Positioned(
                                 bottom: 78,
-                                left: 23,
+                                left: 20,
                                 child: Text(
                                     '$membershipId',
                                     style: const TextStyle(
