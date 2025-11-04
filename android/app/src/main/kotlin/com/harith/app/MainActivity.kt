@@ -1,4 +1,4 @@
-package com.harithagramam.app
+package com.harith.app
 
 import io.flutter.embedding.android.FlutterActivity
 

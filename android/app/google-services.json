@@ -121,6 +121,25 @@
     },
     {
       "client_info": {
+        "mobilesdk_app_id": "1:676046608509:android:8c613f829a00773f84f914",
+        "android_client_info": {
+          "package_name": "com.harith.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCZ3MSFQMNH2fgffG4h3v8exYnC-kU_e4M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:676046608509:android:9e9e8dc2d97a9fd284f914",
         "android_client_info": {
           "package_name": "com.harithagramam.app"

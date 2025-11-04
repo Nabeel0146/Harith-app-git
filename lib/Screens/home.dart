@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:harithapp/ONSHOP/onshopmainscreen.dart';
+import 'package:harithapp/Screens/catgeoryProducts.dart';
 import 'package:harithapp/Screens/harithsingleproduct.dart';
 
 import 'package:harithapp/widgets/productcard.dart';
@@ -589,8 +590,13 @@ Widget _buildHarithaGramamStoreBannerShimmer() {
               final cat = cats[idx];
               return GestureDetector(
                 onTap: () {
-                  // TODO: Navigate to category
-                  print('Tapped category: ${cat['name']}');
+                  Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => CategoryProductsPage(
+                            categoryName: cat['name']!,
+                          ),
+                        ),
+                      );
                 },
                 child: Container(
                   decoration: BoxDecoration(
