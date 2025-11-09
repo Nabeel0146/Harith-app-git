@@ -114,8 +114,8 @@ class HomemadeProductsPage extends StatelessWidget {
                 return ProductCard(
                   name: product['name'] ?? 'Product Name',
                   imageUrl: product['imageUrl'] ?? '',
-                  discountedPrice: displayPrice,
-                  offerPrice: offerPrice,
+                  discountedPrice: offerPrice,
+                  offerPrice: displayPrice,
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(

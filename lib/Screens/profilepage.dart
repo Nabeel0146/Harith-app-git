@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:harithapp/Auth/register.dart';
+import 'package:harithapp/Screens/applymembership.dart';
 
 import 'package:harithapp/formals/help.dart';
 import 'package:harithapp/formals/privacypolicy.dart';
@@ -334,19 +335,9 @@ Future<void> _signOut(BuildContext context) async {
   }
 
   void _applyForMembership(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Apply for Membership'),
-        content: const Text(
-            'Contact Harithagramam support to apply for membership. You will receive your membership card after approval.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
+  Navigator.push(
+    context,
+    MaterialPageRoute(builder: (context) => const MembershipApplicationPage()),
+  );
+}
 }

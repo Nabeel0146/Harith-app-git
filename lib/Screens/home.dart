@@ -17,6 +17,98 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
+
+/* ---------- Banner Image Widget ---------- */
+class BannerImage extends StatefulWidget {
+  final String url;
+
+  const BannerImage({Key? key, required this.url}) : super(key: key);
+
+  @override
+  State<BannerImage> createState() => _BannerImageState();
+}
+
+class _BannerImageState extends State<BannerImage> {
+  double? _imageHeight;
+  double _imageWidth = 300;
+
+  @override
+  void initState() {
+    super.initState();
+    _getImageDimensions();
+  }
+
+  void _getImageDimensions() {
+    final Image image = Image(image: CachedNetworkImageProvider(widget.url));
+    image.image.resolve(const ImageConfiguration()).addListener(
+      ImageStreamListener((ImageInfo info, bool _) {
+        final double width = info.image.width.toDouble();
+        final double height = info.image.height.toDouble();
+        if (mounted) {
+          setState(() {
+            _imageHeight = (200 * height) / width;
+            _imageWidth = 200;
+          });
+        }
+      }, onError: (_, __) {
+        if (mounted) {
+          setState(() {
+            _imageHeight = 150;
+            _imageWidth = 200;
+          });
+        }
+      }),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final height = _imageHeight ?? 150;
+    final width = _imageWidth;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          color: Colors.grey[100],
+          child: CachedNetworkImage(
+            imageUrl: widget.url,
+            fit: BoxFit.contain, // This ensures no cropping
+            width: width,
+            height: height,
+            placeholder: (_, __) => Container(
+              width: width,
+              height: height,
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Center(child: CircularProgressIndicator()),
+            ),
+            errorWidget: (_, __, ___) => Container(
+              width: width,
+              height: height,
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error, color: Colors.grey),
+                  SizedBox(height: 8),
+                  Text('Failed to load', style: TextStyle(color: Colors.grey)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _HomePageState extends State<HomePage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -177,14 +269,14 @@ PreferredSizeWidget get appBar {
     await FirebaseAuth.instance.signOut();
   }
 
-  /* ---------- Banner ---------- */
+ /* ---------- Banner ---------- */
+/* ---------- Banner ---------- */
 Widget _buildBanner() {
   return StreamBuilder<QuerySnapshot>(
     stream: FirebaseFirestore.instance
         .collection('harith-homepage_banners')
         .snapshots(),
     builder: (context, snapshot) {
-      // Handle connection state and errors first
       if (snapshot.connectionState == ConnectionState.waiting) {
         return _buildBannerShimmer();
       }
@@ -194,20 +286,16 @@ Widget _buildBanner() {
         return _buildErrorWidget('Failed to load banners');
       }
 
-      // Check if data exists and has documents
       if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
         return _buildPlaceholderBanner();
       }
 
       final docs = snapshot.data!.docs;
-      
-      // Safely extract banner URLs with null safety
       final urls = <String>[];
       
       for (final doc in docs) {
         final data = doc.data() as Map<String, dynamic>?;
         if (data != null) {
-          // Check each banner field individually
           for (int i = 1; i <= 2; i++) {
             final bannerField = 'banner$i';
             final bannerUrl = data[bannerField] as String?;
@@ -218,18 +306,6 @@ Widget _buildBanner() {
         }
       }
 
-      // Alternative approach using the same pattern but more concise:
-      // final urls = docs
-      //     .map((doc) => doc.data() as Map<String, dynamic>?)
-      //     .where((data) => data != null)
-      //     .expand((data) => [
-      //           data!['banner1'] as String?,
-      //           data['banner2'] as String?,
-      //         ])
-      //     .whereType<String>()
-      //     .where((url) => url.isNotEmpty)
-      //     .toList();
-
       if (urls.isEmpty) {
         return _buildPlaceholderBanner();
       }
@@ -237,26 +313,55 @@ Widget _buildBanner() {
       return CarouselSlider.builder(
         itemCount: urls.length,
         options: CarouselOptions(
-          height: 210,
+          height: 255,
           autoPlay: true,
           enlargeCenterPage: true,
           viewportFraction: 0.97,
           autoPlayInterval: const Duration(seconds: 4),
         ),
-        itemBuilder: (_, idx, __) => ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: CachedNetworkImage(
-            imageUrl: urls[idx],
-            fit: BoxFit.cover,
-            width: double.infinity,
-            placeholder: (_, __) => _buildBannerShimmer(),
-            errorWidget: (_, __, ___) => _buildPlaceholderBanner(),
+        itemBuilder: (_, idx, __) => Container(
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              color: Colors.grey[100], // Background for transparent images
+              child: CachedNetworkImage(
+                imageUrl: urls[idx],
+                fit: BoxFit.contain, // Changed from cover to contain
+                width: double.infinity,
+                placeholder: (_, __) => Container(
+                  height: 210,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Center(child: CircularProgressIndicator()),
+                ),
+                errorWidget: (_, __, ___) => Container(
+                  height: 210,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.error, color: Colors.grey),
+                      SizedBox(height: 8),
+                      Text('Failed to load', style: TextStyle(color: Colors.grey)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       );
     },
   );
 }
+
+
 
   Widget _buildBannerShimmer() {
     return Shimmer.fromColors(
@@ -660,81 +765,82 @@ Widget _buildHarithaGramamStoreBannerShimmer() {
   Widget _buildPromoBanner() => const SizedBox.shrink(); // Placeholder for now
 
   /* ---------- Featured Products ---------- */
-  Widget _buildProducts() {
-    return FutureBuilder<QuerySnapshot>(
-      future: FirebaseFirestore.instance
-          .collection('harith-products')
-          .where('display', isEqualTo: true)
-          .get(),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          print('Products Error: ${snapshot.error}');
-          return _buildSectionError('Failed to load products');
-        }
+  /* ---------- Featured Products ---------- */
+Widget _buildProducts() {
+  return FutureBuilder<QuerySnapshot>(
+    future: FirebaseFirestore.instance
+        .collection('harith-products')
+        .where('display', isEqualTo: true)
+        .where('featured', isEqualTo: true) // Add this condition
+        .get(),
+    builder: (context, snapshot) {
+      if (snapshot.hasError) {
+        print('Products Error: ${snapshot.error}');
+        return _buildSectionError('Failed to load featured products');
+      }
 
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return _buildProductsShimmer();
-        }
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return _buildProductsShimmer();
+      }
 
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const SizedBox.shrink();
-        }
+      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+        return const SizedBox.shrink(); // Hide section if no featured products
+      }
 
-        final items = snapshot.data!.docs;
+      final items = snapshot.data!.docs;
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text(
-                'Featured Products',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Text(
+              'Featured Products',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            SizedBox(
-              height: 220,
-              child: ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                scrollDirection: Axis.horizontal,
-                itemCount: items.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 12),
-                itemBuilder: (_, idx) {
-                  final doc = items[idx];
-                  final p = doc.data() as Map<String, dynamic>;
-                  final productId = doc.id;
+          ),
+          SizedBox(
+            height: 240,
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              scrollDirection: Axis.horizontal,
+              itemCount: items.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (_, idx) {
+                final doc = items[idx];
+                final p = doc.data() as Map<String, dynamic>;
+                final productId = doc.id;
 
-                  return ProductCard(
-                    name: p['name'] ?? 'Product Name',
-                    imageUrl: p['image_url'] ?? '',
-                    discountedPrice: p['discountedprice']?.toString() ?? '',
-                    offerPrice: p['offerprice']?.toString() ??
-                        p['discountedprice']?.toString() ??
-                        '',
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => SingleProductPage(
-                            product: {
-                              ...p,
-                              'id': productId,
-                            },
-                          ),
+                return ProductCard(
+                  name: p['name'] ?? 'Product Name',
+                  imageUrl: p['image_url'] ?? '',
+                  discountedPrice: p['discountedprice']?.toString() ?? '',
+                  offerPrice: p['offerprice']?.toString() ??
+                      p['discountedprice']?.toString() ??
+                      '',
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => SingleProductPage(
+                          product: {
+                            ...p,
+                            'id': productId,
+                          },
                         ),
-                      );
-                    },
-                    isGridItem: false,
-                  );
-                },
-              ),
+                      ),
+                    );
+                  },
+                  isGridItem: false,
+                );
+              },
             ),
-            const SizedBox(height: 20)
-          ],
-        );
-      },
-    );
-  }
-
+          ),
+          const SizedBox(height: 20)
+        ],
+      );
+    },
+  );
+}
   Widget _buildProductsShimmer() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -911,25 +1017,6 @@ Widget _buildHarithaGramamStoreBannerShimmer() {
         }
       }
 
-      // Alternative approach using a list of field names
-      // final urls = docs
-      //     .map((doc) => doc.data() as Map<String, dynamic>?)
-      //     .where((data) => data != null)
-      //     .expand((data) => [
-      //           data!['ad1'] as String?,
-      //           data['ad2'] as String?,
-      //           data['ad3'] as String?,
-      //           data['ad4'] as String?,
-      //           data['ad5'] as String?,
-      //           data['ad6'] as String?,
-      //           data['ad7'] as String?,
-      //           data['ad8'] as String?,
-      //           data['ad9'] as String?,
-      //         ])
-      //     .whereType<String>()
-      //     .where((url) => url.isNotEmpty)
-      //     .toList();
-
       if (urls.isEmpty) return const SizedBox.shrink();
 
       return Padding(
@@ -945,20 +1032,47 @@ Widget _buildHarithaGramamStoreBannerShimmer() {
             CarouselSlider.builder(
               itemCount: urls.length,
               options: CarouselOptions(
-                height: 280,
+                height: 340,
                 autoPlay: true,
                 enlargeCenterPage: true,
                 viewportFraction: 0.97,
                 autoPlayInterval: const Duration(seconds: 4),
               ),
-              itemBuilder: (_, idx, __) => ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: CachedNetworkImage(
-                  imageUrl: urls[idx],
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  placeholder: (_, __) => _buildBannerShimmer(),
-                  errorWidget: (_, __, ___) => _buildPlaceholderBanner(),
+              itemBuilder: (_, idx, __) => Container(
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    color: Colors.grey[100], // Background for transparent images
+                    child: CachedNetworkImage(
+                      imageUrl: urls[idx],
+                      fit: BoxFit.contain, // Changed from cover to contain
+                      width: double.infinity,
+                      placeholder: (_, __) => Container(
+                        height: 280,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Center(child: CircularProgressIndicator()),
+                      ),
+                      errorWidget: (_, __, ___) => Container(
+                        height: 280,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.error, color: Colors.grey),
+                            SizedBox(height: 8),
+                            Text('Failed to load', style: TextStyle(color: Colors.grey)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),

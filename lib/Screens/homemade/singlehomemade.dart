@@ -45,6 +45,20 @@ class HomemadeSingleProductPage extends StatelessWidget {
     final discountedPrice = product['discountedprice']?.toString() ?? '';
     final hasDiscount = discountedPrice.isNotEmpty;
 
+    // Calculate discount percentage
+    double discountPercentage = 0;
+    if (hasDiscount) {
+      try {
+        final original = double.tryParse(originalPrice) ?? 0;
+        final discounted = double.tryParse(discountedPrice) ?? 0;
+        if (original > 0 && discounted > 0 && discounted < original) {
+          discountPercentage = ((original - discounted) / original) * 100;
+        }
+      } catch (e) {
+        discountPercentage = 0;
+      }
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
@@ -60,14 +74,35 @@ class HomemadeSingleProductPage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 4),
-            Text(
-              '₹$originalPrice',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey,
-                decoration: TextDecoration.lineThrough,
-              ),
+            Row(
+              children: [
+                Text(
+                  '₹$originalPrice',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey,
+                    decoration: TextDecoration.lineThrough,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (discountPercentage > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.red[50],
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      '${discountPercentage.round()}% OFF',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ] else ...[
             Text(
