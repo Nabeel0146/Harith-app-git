@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:harithapp/ONSHOP/onshopmainscreen.dart';
+import 'package:harithapp/Screens/Harith-Store/storepage.dart';
 import 'package:harithapp/Screens/catgeoryProducts.dart';
 import 'package:harithapp/Screens/harithsingleproduct.dart';
 
@@ -532,6 +533,7 @@ Widget _buildBanner() {
   }
 
   /* ---------- Haritha Gramam Store Banner ---------- */
+/* ---------- Haritha Gramam Store Banner ---------- */
 Widget _buildHarithaGramamStoreBanner() {
   return StreamBuilder<QuerySnapshot>(
     stream: FirebaseFirestore.instance
@@ -569,60 +571,79 @@ Widget _buildHarithaGramamStoreBanner() {
 
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: const Color.fromARGB(255, 116, 190, 119),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
+        child: GestureDetector(
+          onTap: () {
+
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => HarithStorePage(), // Replace with your actual page
               ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.store,
-                    size: 32,
-                    color: Color.fromARGB(255, 116, 190, 119),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Haritha gramam Store Coming Soon!',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Haritha gramam stores are coming soon..',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.9),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
+            );
+          },
+          child: Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: const Color.fromARGB(255, 116, 190, 119),
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
               ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color.fromARGB(255, 116, 190, 119),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.storefront,
+                      size: 32,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Harith Gramam Store',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Visit harithagramam store and get great deals',
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    Icons.arrow_forward_ios,
+                    size: 20,
+                    color: Color.fromARGB(255, 116, 190, 119),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -639,7 +660,7 @@ Widget _buildHarithaGramamStoreBannerShimmer() {
       highlightColor: Colors.grey[100]!,
       child: Container(
         width: double.infinity,
-        height: 80,
+        height: 100,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -648,6 +669,7 @@ Widget _buildHarithaGramamStoreBannerShimmer() {
     ),
   );
 }
+
 
   /* ---------- Category Grid ---------- */
   Widget _buildCategoryGrid() {
@@ -685,7 +707,7 @@ Widget _buildHarithaGramamStoreBannerShimmer() {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 5,
+              crossAxisCount: 4,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
               childAspectRatio: 0.70,
@@ -707,7 +729,7 @@ Widget _buildHarithaGramamStoreBannerShimmer() {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey, width: 0.5),
+
                   ),
                   padding: const EdgeInsets.all(4),
                   child: Column(
@@ -747,7 +769,7 @@ Widget _buildHarithaGramamStoreBannerShimmer() {
                         cat['name']!,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 9),
+                        style: const TextStyle(fontSize: 8),
                         textAlign: TextAlign.center,
                       ),
                     ],
