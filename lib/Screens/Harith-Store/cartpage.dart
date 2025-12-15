@@ -1032,14 +1032,7 @@ void _navigateToOrders() {
                               color: Colors.grey[600],
                             ),
                           ),
-                        Text(
-                          'Free Delivery on All Orders',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.green[700],
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                       
                       ],
                     ),
                   ),

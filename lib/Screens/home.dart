@@ -6,6 +6,7 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:harithapp/ONSHOP/onshopmainscreen.dart';
 import 'package:harithapp/Screens/Harith-Store/storepage.dart';
+import 'package:harithapp/Screens/applymembership.dart';
 import 'package:harithapp/Screens/catgeoryProducts.dart';
 import 'package:harithapp/Screens/harithsingleproduct.dart';
 
@@ -38,6 +39,10 @@ class _BannerImageState extends State<BannerImage> {
     super.initState();
     _getImageDimensions();
   }
+
+
+
+
 
   void _getImageDimensions() {
     final Image image = Image(image: CachedNetworkImageProvider(widget.url));
@@ -225,50 +230,7 @@ PreferredSizeWidget get appBar {
   );
 }
 
-  /* ---------- Sidebar Drawer ---------- */
- 
 
-  Widget _drawerItem({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-  }) {
-    return ListTile(
-      leading: Icon(icon, color: const Color.fromARGB(255, 116, 190, 119)),
-      title: Text(title,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-      onTap: onTap,
-    );
-  }
-
-  void _showLogoutDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Logout'),
-          content: const Text('Are you sure you want to logout?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _logout();
-              },
-              child: const Text('Logout', style: TextStyle(color: Colors.red)),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<void> _logout() async {
-    await FirebaseAuth.instance.signOut();
-  }
 
  /* ---------- Banner ---------- */
 /* ---------- Banner ---------- */
@@ -533,7 +495,6 @@ Widget _buildBanner() {
   }
 
   /* ---------- Haritha Gramam Store Banner ---------- */
-/* ---------- Haritha Gramam Store Banner ---------- */
 Widget _buildHarithaGramamStoreBanner() {
   return StreamBuilder<QuerySnapshot>(
     stream: FirebaseFirestore.instance
@@ -573,12 +534,7 @@ Widget _buildHarithaGramamStoreBanner() {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: GestureDetector(
           onTap: () {
-
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => HarithStorePage(), // Replace with your actual page
-              ),
-            );
+            _checkMembershipAndNavigate(context);
           },
           child: Container(
             width: double.infinity,
@@ -651,6 +607,154 @@ Widget _buildHarithaGramamStoreBanner() {
     },
   );
 }
+
+
+
+
+/* ---------- Check Membership Function ---------- */
+Future<void> _checkMembershipAndNavigate(BuildContext context) async {
+  try {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      _showMembershipRequiredDialog(context, isLoggedOut: true);
+      return;
+    }
+
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(
+          color: Color.fromARGB(255, 116, 190, 119),
+        ),
+      ),
+    );
+
+    // Check user membership in Firestore
+    final userDoc = await FirebaseFirestore.instance
+        .collection('harith-users')
+        .doc(user.uid)
+        .get();
+
+    // Close loading dialog
+    Navigator.pop(context);
+
+    if (!userDoc.exists) {
+      _showMembershipRequiredDialog(context);
+      return;
+    }
+
+    final userData = userDoc.data() as Map<String, dynamic>;
+    final membershipId = userData['membershipId']?.toString();
+    
+    // Check if user has membership
+    final hasMembership = membershipId != null && 
+                          membershipId.isNotEmpty && 
+                          membershipId != 'null';
+    
+    if (hasMembership) {
+      // User has membership, navigate to store page
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => HarithStorePage(),
+        ),
+      );
+    } else {
+      // User doesn't have membership, show dialog
+      _showMembershipRequiredDialog(context);
+    }
+    
+  } catch (e) {
+    print('Error checking membership: $e');
+    // Close loading dialog if still open
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context);
+    }
+    _showMembershipRequiredDialog(context, error: e.toString());
+  }
+}
+
+
+
+/* ---------- Show Membership Required Dialog ---------- */
+void _showMembershipRequiredDialog(BuildContext context, {bool isLoggedOut = false, String? error}) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Row(
+        children: [
+          Icon(
+            Icons.card_membership,
+            color: Color.fromARGB(255, 116, 190, 119),
+          ),
+          SizedBox(width: 8),
+          Text(
+            'Membership Required',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Color.fromARGB(255, 116, 190, 119),
+            ),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (isLoggedOut)
+            const Text('Please login to access Harith Gramam Store.')
+          else if (error != null)
+            Text('Error checking membership: $error')
+          else
+            const Text('Harith Gramam Store products are only available for Harithagramam Members.'),
+          
+          const SizedBox(height: 8),
+          const Text(
+            'Become a member to enjoy exclusive products and discounts.',
+            style: TextStyle(color: Colors.grey, fontSize: 13),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text(
+            'Cancel',
+            style: TextStyle(color: Colors.grey),
+          ),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            Navigator.pop(context); // Close this dialog
+            _navigateToMembershipApplication(context);
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color.fromARGB(255, 116, 190, 119),
+          ),
+          child: const Text('Apply for Membership'),
+        ),
+      ],
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+    ),
+  );
+}
+
+/* ---------- Navigate to Membership Application ---------- */
+void _navigateToMembershipApplication(BuildContext context) {
+  // Import the MembershipApplicationPage at the top of your file:
+  // import 'package:harithapp/Screens/applymembership.dart';
+  
+  Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (_) => const MembershipApplicationPage(),
+    ),
+  );
+}
+
+
 
 Widget _buildHarithaGramamStoreBannerShimmer() {
   return Padding(

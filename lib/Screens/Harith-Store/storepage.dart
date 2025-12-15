@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:harithapp/Screens/Harith-Store/single2.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:harithapp/Screens/Harith-Store/cartpage.dart';
 import 'package:harithapp/Screens/harithsingleproduct.dart';
@@ -472,7 +473,7 @@ class _HarithStorePageState extends State<HarithStorePage> {
         crossAxisCount: 2,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
-        childAspectRatio: 0.5,
+        childAspectRatio: 0.58,
       ),
       itemCount: _filteredProducts.length,
       itemBuilder: (context, index) {
@@ -488,18 +489,34 @@ class _HarithStorePageState extends State<HarithStorePage> {
         final int cartQuantity = product['cartQuantity'];
 
         return GestureDetector(
-          onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => SingleProductPage(
-                  product: {
-                    ...product,
-                    'id': product['id'],
-                  },
-                ),
-              ),
-            );
-          },
+         onTap: () {
+  Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (_) => HarithSingleProductPage(
+        product: {
+          ...product,
+          'id': product['id'],
+          'category': product['category'],
+          'discountedprice': product['price'],
+          'offerprice': product['offerPrice'],
+          'lastprice': product['lastPrice'],
+          'lastpricequantity': product['lastPriceQuantity'],
+          'image_url': product['image'],
+          'details': product['details'],
+          'stock': product['stock'] ?? -1, // Add if available
+        },
+        initialCartItems: _cartItems,
+        onCartUpdate: (updatedCart) {
+          setState(() {
+            _cartItems = updatedCart;
+          });
+          _saveCartToPrefs();
+          _fetchProducts(); // Refresh product display
+        },
+      ),
+    ),
+  );
+},
           child: Card(
             elevation: 2,
             shape: RoundedRectangleBorder(
