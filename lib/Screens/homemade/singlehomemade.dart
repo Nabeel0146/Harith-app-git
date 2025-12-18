@@ -8,37 +8,60 @@ class HomemadeSingleProductPage extends StatelessWidget {
   final Map<String, dynamic> product;
   const HomemadeSingleProductPage({super.key, required this.product});
 
-  Future<void> _contactOnWhatsApp(BuildContext context) async {
-    final whatsappNumber = product['whatsappNumber'] as String?;
-    
-    if (whatsappNumber == null || whatsappNumber.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('WhatsApp number not available')),
-      );
-      return;
-    }
-
-    // Clean the contact number (remove spaces, dashes, etc.)
-    final cleanContact = whatsappNumber.replaceAll(RegExp(r'[+\s\-()]'), '');
-    
-    final message =
-        'Hello! I am interested in your product: *${product['name']}*';
-    final url = 'https://wa.me/$cleanContact?text=${Uri.encodeComponent(message)}';
-
-    try {
-      if (!await launchUrl(Uri.parse(url))) {
-        print('Could not launch $url');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Unable to open WhatsApp')),
-        );
-      }
-    } catch (e) {
-      print('Error launching WhatsApp: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
-    }
+ Future<void> _contactOnWhatsApp(BuildContext context) async {
+  final whatsappNumber = product['whatsappNumber'] as String?;
+  
+  if (whatsappNumber == null || whatsappNumber.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('WhatsApp number not available')),
+    );
+    return;
   }
+
+  // Clean the contact number (remove spaces, dashes, etc.)
+  final cleanContact = whatsappNumber.replaceAll(RegExp(r'[+\s\-()]'), '');
+  
+  // Build a more detailed and professional message
+  final message = '''
+
+
+Hello! I am interested in purchasing your product:
+
+📦 *Product Details:*
+• *Name:* ${product['name']}
+${product.containsKey('price') ? '• *Price:* ${product['price']}\n' : ''}
+${product.containsKey('category') ? '• *Category:* ${product['category']}\n' : ''}
+${product.containsKey('description') && (product['description'] as String?)?.isNotEmpty == true 
+  ? '• *Description:* ${product['description']}\n' 
+  : ''}
+
+''';
+
+  // Alternative shorter message option:
+  // final conciseMessage = '''
+  // *Product Inquiry:* ${product['name']}
+  // 
+  // Hello! I'm interested in this product. 
+  // ${product.containsKey('price') ? 'Price: ${product['price']}\n' : ''}
+  // Please share availability and ordering details.
+  // ''';
+
+  final url = 'https://wa.me/$cleanContact?text=${Uri.encodeComponent(message)}';
+
+  try {
+    if (!await launchUrl(Uri.parse(url))) {
+      print('Could not launch $url');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open WhatsApp')),
+      );
+    }
+  } catch (e) {
+    print('Error launching WhatsApp: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error: $e')),
+    );
+  }
+}
 
   Widget _buildPriceSection() {
     final originalPrice = product['price']?.toString() ?? '';

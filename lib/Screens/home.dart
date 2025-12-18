@@ -9,6 +9,7 @@ import 'package:harithapp/Screens/Harith-Store/storepage.dart';
 import 'package:harithapp/Screens/applymembership.dart';
 import 'package:harithapp/Screens/catgeoryProducts.dart';
 import 'package:harithapp/Screens/harithsingleproduct.dart';
+import 'package:harithapp/Screens/search_page.dart';
 
 import 'package:harithapp/widgets/productcard.dart';
 import 'package:shimmer/shimmer.dart';
@@ -208,20 +209,36 @@ PreferredSizeWidget get appBar {
                 ],
               ),
               const SizedBox(height: 12),
-              TextField(
-                decoration: InputDecoration(
-                  hintText: 'Search...',
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding:
-                      const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide.none,
-                  ),
-                  prefixIcon: const Icon(Icons.search, color: Colors.green),
-                ),
-              ),
+              // Replace the TextField widget in the app bar (around line 84)
+GestureDetector(
+  onTap: () {
+    // Navigate to search page when tapped
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const SearchPage(),
+      ),
+    );
+  },
+  child: AbsorbPointer(
+    child: TextField(
+      decoration: InputDecoration(
+        hintText: 'Search products, categories...',
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding:
+            const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(24),
+          borderSide: BorderSide.none,
+        ),
+        prefixIcon: const Icon(Icons.search, color: Colors.green),
+      ),
+      // Add these properties to make it look like a search field
+      readOnly: true,
+      enabled: false,
+    ),
+  ),
+),
             ],
           ),
         ),
@@ -694,6 +711,7 @@ void _showMembershipRequiredDialog(BuildContext context, {bool isLoggedOut = fal
             style: TextStyle(
               fontWeight: FontWeight.bold,
               color: Color.fromARGB(255, 116, 190, 119),
+              fontSize: 17
             ),
           ),
         ],

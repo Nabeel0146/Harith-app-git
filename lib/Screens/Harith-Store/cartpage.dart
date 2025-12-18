@@ -30,18 +30,20 @@ class _HarithCartPageState extends State<HarithCartPage> {
   String _deliveryAddress = '';
   String _wardNo = '';
   
-  // Payment methods
-  final List<String> _paymentMethods = ['Cash on Delivery'];
-  String _selectedPaymentMethod = 'Cash on Delivery';
-  
-  // Order summary
+  // Price tracking
   double _subTotal = 0.0;
   double _grandTotal = 0.0;
   double _memberTotal = 0.0;
   double _offerTotal = 0.0;
   double _regularTotal = 0.0;
   double _totalSavings = 0.0;
-
+  double _totalOriginalValue = 0.0; // Total of discountedprice (original)
+  
+  // Item counts
+  int _memberItemsCount = 0;
+  int _offerItemsCount = 0;
+  int _regularItemsCount = 0;
+  
   @override
   void initState() {
     super.initState();
@@ -69,6 +71,7 @@ class _HarithCartPageState extends State<HarithCartPage> {
             _deliveryAddress = _userData?['deliveryAddress']?.toString() ?? '';
             _wardNo = _userData?['wardNo']?.toString() ?? '';
           });
+          _calculateTotals();
         }
       }
     } catch (e) {
@@ -82,40 +85,50 @@ class _HarithCartPageState extends State<HarithCartPage> {
     _offerTotal = 0.0;
     _regularTotal = 0.0;
     _totalSavings = 0.0;
+    _totalOriginalValue = 0.0;
+    
+    _memberItemsCount = 0;
+    _offerItemsCount = 0;
+    _regularItemsCount = 0;
     
     for (var item in _cartItems) {
-      final double originalPrice = item['price'] ?? 0.0;
-      final double? offerPrice = item['offerPrice'];
-      final double? lastPrice = item['lastPrice'];
+      final double discountedPrice = item['price'] ?? 0.0; // This is the discountedprice from product
+      final double? offerPrice = item['offerPrice']; // offerprice from product
+      final double? lastPrice = item['lastPrice']; // lastprice from product
       final int quantity = item['quantity'] is int ? item['quantity'] as int : 0;
       
-      double finalPrice;
-      double itemSavings = 0.0;
+      // Track original value (based on discountedprice)
+      _totalOriginalValue += (discountedPrice * quantity);
       
-      // Calculate price based on membership eligibility
+      double finalPrice;
+      
+      // Determine which price applies
       if (_hasMembership && 
           lastPrice != null && 
           lastPrice > 0 && 
           item['isEligibleForLastPrice'] == true) {
+        // Member price applies
         finalPrice = lastPrice;
         _memberTotal += (lastPrice * quantity);
-        itemSavings = (originalPrice - lastPrice) * quantity;
+        _memberItemsCount += quantity;
+        _totalSavings += (discountedPrice - lastPrice) * quantity;
       } else if (offerPrice != null && offerPrice > 0) {
+        // Offer price applies
         finalPrice = offerPrice;
         _offerTotal += (offerPrice * quantity);
-        itemSavings = (originalPrice - offerPrice) * quantity;
+        _offerItemsCount += quantity;
+        _totalSavings += (discountedPrice - offerPrice) * quantity;
       } else {
-        finalPrice = originalPrice;
-        _regularTotal += (originalPrice * quantity);
+        // Regular price applies (discountedprice)
+        finalPrice = discountedPrice;
+        _regularTotal += (discountedPrice * quantity);
+        _regularItemsCount += quantity;
       }
       
-      final double itemTotal = finalPrice * quantity;
-      _subTotal += itemTotal;
-      _totalSavings += itemSavings;
+      _subTotal += (finalPrice * quantity);
     }
     
-    // Calculate grand total (no delivery charge, no tax)
-    _grandTotal = _subTotal;
+    _grandTotal = _subTotal; // No delivery charge
     
     setState(() {});
   }
@@ -178,165 +191,33 @@ class _HarithCartPageState extends State<HarithCartPage> {
     final String name = item['name']?.toString() ?? 'Unknown';
     final String? imageUrl = item['image']?.toString();
     final int quantity = item['quantity'] is int ? item['quantity'] as int : 0;
-    final double originalPrice = item['price'] ?? 0.0;
-    final double? offerPrice = item['offerPrice'];
-    final double? lastPrice = item['lastPrice'];
+    final double discountedPrice = item['price'] ?? 0.0; // This is discountedprice
+    final double? offerPrice = item['offerPrice']; // offerprice
+    final double? lastPrice = item['lastPrice']; // lastprice
     final bool isEligibleForLastPrice = item['isEligibleForLastPrice'] ?? false;
     
     double finalPrice;
     String priceType = 'Regular';
     Color priceColor = Colors.green;
-    List<Widget> priceDetails = [];
     
-    // Determine which price to use
+    // Determine which price applies
     if (_hasMembership && lastPrice != null && lastPrice > 0 && isEligibleForLastPrice) {
       finalPrice = lastPrice;
       priceType = 'Member';
       priceColor = Colors.orange;
-      
-      // Show original price strikethrough
-      if (originalPrice > lastPrice) {
-        priceDetails.add(
-          Text(
-            '₹${originalPrice.toStringAsFixed(2)}',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[500],
-              decoration: TextDecoration.lineThrough,
-            ),
-          ),
-        );
-      }
-      
-      // Show member price
-      priceDetails.add(
-        Text(
-          '₹${lastPrice.toStringAsFixed(2)}',
-          style: TextStyle(
-            fontSize: 14,
-            color: priceColor,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      );
-      
-      // Show savings if any
-      if (originalPrice > lastPrice) {
-        final double savings = (originalPrice - lastPrice) * quantity;
-        priceDetails.add(
-          Text(
-            'Save: ₹${savings.toStringAsFixed(2)}',
-            style: const TextStyle(
-              fontSize: 10,
-              color: Colors.green,
-              fontStyle: FontStyle.italic,
-            ),
-          ),
-        );
-      }
     } else if (offerPrice != null && offerPrice > 0) {
       finalPrice = offerPrice;
       priceType = 'Offer';
       priceColor = Colors.blue;
-      
-      // Show original price strikethrough
-      priceDetails.add(
-        Text(
-          '₹${originalPrice.toStringAsFixed(2)}',
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[500],
-            decoration: TextDecoration.lineThrough,
-          ),
-        ),
-      );
-      
-      // Show offer price
-      priceDetails.add(
-        Text(
-          '₹${offerPrice.toStringAsFixed(2)}',
-          style: TextStyle(
-            fontSize: 14,
-            color: priceColor,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      );
-      
-      // Show savings
-      final double savings = (originalPrice - offerPrice) * quantity;
-      priceDetails.add(
-        Text(
-          'Save: ₹${savings.toStringAsFixed(2)}',
-          style: const TextStyle(
-            fontSize: 10,
-            color: Colors.green,
-            fontStyle: FontStyle.italic,
-          ),
-        ),
-      );
-      
-      // Show member price hint if available
-      if (_hasMembership && lastPrice != null && lastPrice > 0) {
-        priceDetails.add(
-          Container(
-            margin: const EdgeInsets.only(top: 2),
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-            decoration: BoxDecoration(
-              color: Colors.orange[50],
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: Colors.orange, width: 1),
-            ),
-            child: Text(
-              'Member: ₹${lastPrice.toStringAsFixed(2)}',
-              style: const TextStyle(
-                fontSize: 9,
-                color: Colors.orange,
-              ),
-            ),
-          ),
-        );
-      }
     } else {
-      finalPrice = originalPrice;
+      finalPrice = discountedPrice;
       priceType = 'Regular';
       priceColor = Colors.green;
-      
-      priceDetails.add(
-        Text(
-          '₹${originalPrice.toStringAsFixed(2)}',
-          style: TextStyle(
-            fontSize: 14,
-            color: priceColor,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      );
-      
-      // Show member price hint if available
-      if (_hasMembership && lastPrice != null && lastPrice > 0) {
-        priceDetails.add(
-          Container(
-            margin: const EdgeInsets.only(top: 2),
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-            decoration: BoxDecoration(
-              color: Colors.orange[50],
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: Colors.orange, width: 1),
-            ),
-            child: Text(
-              'Member: ₹${lastPrice.toStringAsFixed(2)}',
-              style: const TextStyle(
-                fontSize: 9,
-                color: Colors.orange,
-              ),
-            ),
-          ),
-        );
-      }
     }
     
     final double itemTotal = finalPrice * quantity;
+    final double originalItemTotal = discountedPrice * quantity;
+    final double savings = originalItemTotal - itemTotal;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -347,6 +228,7 @@ class _HarithCartPageState extends State<HarithCartPage> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Product Image
                 Container(
                   width: 80,
                   height: 80,
@@ -389,6 +271,7 @@ class _HarithCartPageState extends State<HarithCartPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Product Name
                       Text(
                         name,
                         style: const TextStyle(
@@ -399,105 +282,89 @@ class _HarithCartPageState extends State<HarithCartPage> {
                         overflow: TextOverflow.ellipsis,
                       ),
                       
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 8),
                       
-                      // Show all three prices
+                      // All Three Prices Display
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Original Price
-                          Row(
-                            children: [
-                              const Text(
-                                'MRP: ',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                              Text(
-                                '₹${originalPrice.toStringAsFixed(2)}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[700],
-                                  decoration: _hasMembership || (offerPrice != null && offerPrice > 0)
-                                      ? TextDecoration.lineThrough
-                                      : TextDecoration.none,
-                                ),
-                              ),
-                            ],
+                          // Regular Price (discountedprice)
+                          _buildPriceRow(
+                            'Regular Price:',
+                            '₹${discountedPrice.toStringAsFixed(2)}',
+                            isApplied: priceType == 'Regular',
+                            color: priceType == 'Regular' ? Colors.green : Colors.grey,
                           ),
                           
-                          // Offer Price
+                          // Offer Price (offerprice)
                           if (offerPrice != null && offerPrice > 0)
-                            Row(
-                              children: [
-                                const Text(
-                                  'Offer: ',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.blue,
-                                  ),
-                                ),
-                                Text(
-                                  '₹${offerPrice.toStringAsFixed(2)}',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.blue,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
+                            _buildPriceRow(
+                              'Offer Price:',
+                              '₹${offerPrice.toStringAsFixed(2)}',
+                              isApplied: priceType == 'Offer',
+                              color: priceType == 'Offer' ? Colors.blue : Colors.grey,
                             ),
                           
-                          // Member Price
+                          // Member Price (lastprice)
                           if (lastPrice != null && lastPrice > 0)
-                            Row(
-                              children: [
-                                Text(
-                                  '${_hasMembership ? 'Your' : 'Member'}: ',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: _hasMembership ? Colors.orange : Colors.grey,
-                                  ),
-                                ),
-                                Text(
-                                  '₹${lastPrice.toStringAsFixed(2)}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: _hasMembership ? Colors.orange : Colors.grey,
-                                    fontWeight: _hasMembership ? FontWeight.bold : FontWeight.normal,
-                                  ),
-                                ),
-                              ],
+                            _buildPriceRow(
+                              _hasMembership ? 'Your Member Price:' : 'Member Price:',
+                              '₹${lastPrice.toStringAsFixed(2)}',
+                              isApplied: priceType == 'Member',
+                              color: priceType == 'Member' ? Colors.orange : Colors.grey,
+                              isMemberPrice: true,
                             ),
                           
-                          // Current price being applied
-                          const SizedBox(height: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
+                          // If no lastprice available
+                          if (lastPrice == null || lastPrice <= 0)
+                            _buildPriceRow(
+                              'Member Price:',
+                              'Not Available',
+                              color: Colors.grey,
+                              isNotAvailable: true,
                             ),
-                            decoration: BoxDecoration(
-                              color: priceColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: priceColor),
-                            ),
-                            child: Text(
-                              'Applied: $priceType Price',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: priceColor,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
                         ],
                       ),
                       
+                      // Applied Price Tag
                       const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: priceColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: priceColor),
+                        ),
+                        child: Text(
+                          'Applied: $priceType Price',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: priceColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                       
+                      // Savings if any
+                      if (savings > 0)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            'You save: ₹${savings.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.green,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ),
+                      
+                      const SizedBox(height: 12),
+                      
+                      // Quantity Controls
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
@@ -559,6 +426,7 @@ class _HarithCartPageState extends State<HarithCartPage> {
                   ),
                 ),
                 
+                // Delete Button
                 IconButton(
                   onPressed: () => _removeItem(index),
                   icon: const Icon(
@@ -569,22 +437,70 @@ class _HarithCartPageState extends State<HarithCartPage> {
               ],
             ),
             
+            // Item Total
             const SizedBox(height: 12),
-            
             Align(
               alignment: Alignment.centerRight,
-              child: Text(
-                'Item Total: ₹${itemTotal.toStringAsFixed(2)}',
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    'Item Total: ₹${itemTotal.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  ),
+                  if (savings > 0)
+                    Text(
+                      'Original: ₹${originalItemTotal.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                        decoration: TextDecoration.lineThrough,
+                      ),
+                    ),
+                ],
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildPriceRow(String label, String value, {
+    bool isApplied = false,
+    Color color = Colors.grey,
+    bool isMemberPrice = false,
+    bool isNotAvailable = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                color: color,
+                fontWeight: isApplied ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 13,
+              color: color,
+              fontWeight: isApplied ? FontWeight.bold : FontWeight.normal,
+              fontStyle: isNotAvailable ? FontStyle.italic : FontStyle.normal,
+            ),
+          ),
+        ],
+      )
     );
   }
 
@@ -622,14 +538,15 @@ class _HarithCartPageState extends State<HarithCartPage> {
       final orderId = 'HARITH-${DateTime.now().millisecondsSinceEpoch}';
       
       final List<Map<String, dynamic>> orderItems = _cartItems.map((item) {
-        final double originalPrice = item['price'] ?? 0.0;
-        final double? offerPrice = item['offerPrice'];
-        final double? lastPrice = item['lastPrice'];
+        final double discountedPrice = item['price'] ?? 0.0; // discountedprice
+        final double? offerPrice = item['offerPrice']; // offerprice
+        final double? lastPrice = item['lastPrice']; // lastprice
         final int quantity = item['quantity'] is int ? item['quantity'] as int : 0;
         
         double finalPrice;
         String priceType = 'regular';
         
+        // Determine which price was applied
         if (_hasMembership && 
             lastPrice != null && 
             lastPrice > 0 && 
@@ -640,7 +557,7 @@ class _HarithCartPageState extends State<HarithCartPage> {
           finalPrice = offerPrice;
           priceType = 'offer';
         } else {
-          finalPrice = originalPrice;
+          finalPrice = discountedPrice;
           priceType = 'regular';
         }
         
@@ -649,16 +566,14 @@ class _HarithCartPageState extends State<HarithCartPage> {
           'name': item['name'],
           'image': item['image'],
           'quantity': quantity,
-          'originalPrice': originalPrice,
-          'offerPrice': offerPrice,
-          'lastPrice': lastPrice,
-          'lastPriceQuantity': item['lastPriceQuantity'] ?? 0.0,
-          'remainingLastPriceQuantity': item['remainingLastPriceQuantity'] ?? 0.0,
-          'alreadyPurchased': item['alreadyPurchased'] ?? 0.0,
+          'discountedPrice': discountedPrice, // Regular price
+          'offerPrice': offerPrice, // Offer price
+          'lastPrice': lastPrice, // Member price
           'isEligibleForLastPrice': item['isEligibleForLastPrice'] ?? false,
           'unitPrice': finalPrice,
           'priceType': priceType,
           'itemTotal': finalPrice * quantity,
+          'originalValue': discountedPrice * quantity, // Value at regular price
         };
       }).toList();
 
@@ -671,19 +586,20 @@ class _HarithCartPageState extends State<HarithCartPage> {
         'deliveryAddress': _deliveryAddress,
         'wardNo': _wardNo,
         'membershipId': _userData?['membershipId'] ?? '',
-        'isMembershipApplied': _hasMembership,
+        'hasMembership': _hasMembership,
         'items': orderItems,
         'subTotal': _subTotal,
-        'deliveryCharge': 0.0, // Always 0
+        'originalTotalValue': _totalOriginalValue, // Total at regular prices
         'grandTotal': _grandTotal,
+        'memberItemsCount': _memberItemsCount,
+        'offerItemsCount': _offerItemsCount,
+        'regularItemsCount': _regularItemsCount,
         'memberPriceTotal': _memberTotal,
         'offerPriceTotal': _offerTotal,
         'regularPriceTotal': _regularTotal,
         'totalSavings': _totalSavings,
-        'paymentMethod': _selectedPaymentMethod,
-        'paymentStatus': _selectedPaymentMethod == 'Cash on Delivery' 
-            ? 'pending' 
-            : 'pending_payment',
+        'paymentMethod': 'Cash on Delivery',
+        'paymentStatus': 'pending',
         'orderStatus': 'pending',
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
@@ -724,6 +640,7 @@ class _HarithCartPageState extends State<HarithCartPage> {
     }
   }
 
+  // Update the order confirmation dialog
   void _showOrderConfirmation() {
     showDialog(
       context: context,
@@ -734,77 +651,7 @@ class _HarithCartPageState extends State<HarithCartPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Order Summary',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              
-              const SizedBox(height: 16),
-              
-              // Price Breakdown
-              if (_memberTotal > 0)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildPriceBreakdownRow(
-                      'Member Price Items',
-                      _memberTotal,
-                      color: Colors.orange,
-                    ),
-                    if (_hasMembership && _totalSavings > 0)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 16, bottom: 8),
-                        child: Text(
-                          'You saved: ₹${_totalSavings.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.green,
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              
-              if (_offerTotal > 0)
-                _buildPriceBreakdownRow(
-                  'Offer Price Items',
-                  _offerTotal,
-                  color: Colors.blue,
-                ),
-              
-              if (_regularTotal > 0)
-                _buildPriceBreakdownRow(
-                  'Regular Price Items',
-                  _regularTotal,
-                  color: Colors.green,
-                ),
-              
-              const SizedBox(height: 8),
-              
-              // Subtotal
-              _buildSummaryRow('Subtotal', '₹${_subTotal.toStringAsFixed(2)}'),
-              
-              // No Delivery Charge
-             
-              
-              const Divider(),
-              
-              // Total Amount
-              _buildSummaryRow(
-                'Total Amount',
-                '₹${_grandTotal.toStringAsFixed(2)}',
-                isBold: true,
-                color: Colors.green,
-              ),
-              
-              const SizedBox(height: 16),
-              
-              // Savings Summary
-             
+              _buildPriceBreakdown(),
               
               const SizedBox(height: 16),
               
@@ -837,18 +684,13 @@ class _HarithCartPageState extends State<HarithCartPage> {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 4),
-              Text(
-                _selectedPaymentMethod,
-                style: const TextStyle(
+              const Text(
+                'Cash on Delivery',
+                style: TextStyle(
                   fontSize: 14,
                   color: Colors.green,
                 ),
               ),
-              
-              const SizedBox(height: 16),
-              
-              // Order Note
-             
             ],
           ),
         ),
@@ -878,7 +720,12 @@ class _HarithCartPageState extends State<HarithCartPage> {
     );
   }
 
-  Widget _buildPriceBreakdownRow(String label, double amount, {Color? color}) {
+  Widget _buildPriceBreakdownRow(String label, String value, {
+    Color? color,
+    bool isBold = false,
+    bool isDiscount = false,
+    double fontSize = 14,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -887,16 +734,17 @@ class _HarithCartPageState extends State<HarithCartPage> {
           Text(
             label,
             style: TextStyle(
-              fontSize: 13,
-              color: color,
+              fontSize: fontSize,
+              color: color ?? Colors.black,
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
             ),
           ),
           Text(
-            '₹${amount.toStringAsFixed(2)}',
+            isDiscount ? '-$value' : value,
             style: TextStyle(
-              fontSize: 13,
-              color: color,
-              fontWeight: FontWeight.bold,
+              fontSize: fontSize,
+              color: isDiscount ? Colors.green : (color ?? Colors.black),
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
             ),
           ),
         ],
@@ -904,41 +752,221 @@ class _HarithCartPageState extends State<HarithCartPage> {
     );
   }
 
-  Widget _buildSummaryRow(String label, String value, 
-      {bool isBold = false, Color? color}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+Widget _buildPriceBreakdown() {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text(
+        'Price Summary',
+        style: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      
+      const SizedBox(height: 16),
+      
+      // Summary by Price Type
+      if (_memberItemsCount > 0)
+        _buildSimplePriceRow(
+          'Member Price Items',
+          '${_memberItemsCount} items × ₹${_memberTotal.toStringAsFixed(2)}',
+          color: Colors.orange,
+        ),
+      
+      if (_offerItemsCount > 0)
+        _buildSimplePriceRow(
+          'Offer Price Items',
+          '${_offerItemsCount} items × ₹${_offerTotal.toStringAsFixed(2)}',
+          color: Colors.blue,
+        ),
+      
+      if (_regularItemsCount > 0)
+        _buildSimplePriceRow(
+          'Regular Price Items',
+          '${_regularItemsCount} items × ₹${_regularTotal.toStringAsFixed(2)}',
+          color: Colors.green,
+        ),
+      
+      const SizedBox(height: 12),
+      const Divider(),
+      const SizedBox(height: 8),
+      
+      // Simple Total Breakdown
+      Column(
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-              color: color,
-            ),
+          _buildSimplePriceRow(
+            'Total Items',
+            '${_cartItems.length} items',
+            fontSize: 14,
           ),
-          Text(
-            value,
-            style: TextStyle(
-              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-              color: color,
-              fontSize: isBold ? 16 : 14,
+          
+          const SizedBox(height: 4),
+          
+          _buildSimplePriceRow(
+            'Subtotal',
+            '₹${_subTotal.toStringAsFixed(2)}',
+            fontSize: 14,
+          ),
+          
+          if (_totalSavings > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: _buildSimplePriceRow(
+                'You Save',
+                '-₹${_totalSavings.toStringAsFixed(2)}',
+                color: Colors.green,
+                fontSize: 14,
+              ),
             ),
+          
+          const SizedBox(height: 8),
+          const Divider(thickness: 1.5),
+          const SizedBox(height: 8),
+          
+          // Grand Total
+          _buildSimplePriceRow(
+            'Total Amount',
+            '₹${_grandTotal.toStringAsFixed(2)}',
+            isBold: true,
+            fontSize: 20,
+            color: Colors.green,
           ),
         ],
       ),
-    );
-  }
+      
+      // Savings note
+      if (_totalSavings > 0)
+        Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.green[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.green, width: 0.5),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.discount, size: 16, color: Colors.green),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'You saved ₹${_totalSavings.toStringAsFixed(2)} on this order!',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.green,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      
+      // Member note
+      if (_hasMembership && _memberItemsCount > 0)
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.orange[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.orange, width: 0.5),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.verified_user, size: 16, color: Colors.orange),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Member price applied to ${_memberItemsCount} items',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.orange,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      
+      // Offer note
+      if (_offerItemsCount > 0)
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.blue[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.blue, width: 0.5),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.local_offer, size: 16, color: Colors.blue),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Offer price applied to ${_offerItemsCount} items',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.blue,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+    ],
+  );
+}
 
-void _navigateToOrders() {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => const HarithOrdersPage(),
+Widget _buildSimplePriceRow(String label, String value, {
+  Color? color,
+  bool isBold = false,
+  double fontSize = 14,
+}) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: fontSize,
+            color: color ?? Colors.black,
+            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: fontSize,
+            color: color ?? Colors.black,
+            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ],
     ),
   );
 }
+
+  Widget _buildOrderSummary() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: _buildPriceBreakdown(),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -947,14 +975,19 @@ void _navigateToOrders() {
         title: const Text('My Cart'),
         backgroundColor: const Color.fromARGB(255, 116, 190, 119),
         actions: [
-          // Orders button
           IconButton(
-            onPressed: _navigateToOrders,
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const HarithOrdersPage(),
+                ),
+              );
+            },
             icon: const Icon(Icons.receipt_long),
             tooltip: 'My Orders',
           ),
           
-          // Clear cart button
           if (_cartItems.isNotEmpty)
             IconButton(
               onPressed: () {
@@ -1032,7 +1065,6 @@ void _navigateToOrders() {
                               color: Colors.grey[600],
                             ),
                           ),
-                       
                       ],
                     ),
                   ),
@@ -1099,6 +1131,7 @@ void _navigateToOrders() {
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       children: [
+                        // Cart Items
                         Column(
                           children: List.generate(
                             _cartItems.length,
@@ -1108,153 +1141,10 @@ void _navigateToOrders() {
                         
                         const SizedBox(height: 24),
                         
-                        // Detailed Order Summary
-                        Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Price Breakdown',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                
-                                const SizedBox(height: 16),
-                                
-                                // Member Price Breakdown
-                                if (_memberTotal > 0)
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      _buildPriceBreakdownRow(
-                                        'Member Price Items',
-                                        _memberTotal,
-                                        color: Colors.orange,
-                                      ),
-                                      if (_hasMembership && _totalSavings > 0)
-                                        Padding(
-                                          padding: const EdgeInsets.only(left: 16, bottom: 8),
-                                          child: Text(
-                                            'Member Savings: ₹${_totalSavings.toStringAsFixed(2)}',
-                                            style: const TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.green,
-                                              fontStyle: FontStyle.italic,
-                                            ),
-                                          ),
-                                        ),
-                                      const SizedBox(height: 8),
-                                    ],
-                                  ),
-                                
-                                // Offer Price Breakdown
-                                if (_offerTotal > 0)
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      _buildPriceBreakdownRow(
-                                        'Offer Price Items',
-                                        _offerTotal,
-                                        color: Colors.blue,
-                                      ),
-                                      const SizedBox(height: 8),
-                                    ],
-                                  ),
-                                
-                                // Regular Price Breakdown
-                                if (_regularTotal > 0)
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      _buildPriceBreakdownRow(
-                                        'Regular Price Items',
-                                        _regularTotal,
-                                        color: Colors.green,
-                                      ),
-                                      const SizedBox(height: 8),
-                                    ],
-                                  ),
-                                
-                                const Divider(),
-                                
-                                // Subtotal
-                                _buildSummaryRow('Subtotal', '₹${_subTotal.toStringAsFixed(2)}'),
-                                
-                                // No Delivery Charge
-                               
-                                
-                                
-                                const Divider(),
-                                
-                                // Grand Total
-                                _buildSummaryRow(
-                                  'Total Amount',
-                                  '₹${_grandTotal.toStringAsFixed(2)}',
-                                  isBold: true,
-                                  color: Colors.green,
-                                ),
-                                
-                                const SizedBox(height: 16),
-                                
-                                // Savings Summary
-                               
-                                
-                                const SizedBox(height: 24),
-                                
-                                // Payment Method
-                                const Text(
-                                  'Payment Method',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                                
-                                const SizedBox(height: 8),
-                                
-                                Column(
-                                  children: _paymentMethods.map((method) {
-                                    return RadioListTile<String>(
-                                      title: Text(method),
-                                      value: method,
-                                      groupValue: _selectedPaymentMethod,
-                                      onChanged: (value) {
-                                        setState(() {
-                                          _selectedPaymentMethod = value!;
-                                        });
-                                      },
-                                      contentPadding: EdgeInsets.zero,
-                                    );
-                                  }).toList(),
-                                ),
-                                
-                                const SizedBox(height: 16),
-                                
-                                // Delivery Address
-                                if (_deliveryAddress.isNotEmpty)
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        'Delivery Address:',
-                                        style: TextStyle(fontWeight: FontWeight.bold),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(_deliveryAddress),
-                                      if (_wardNo.isNotEmpty)
-                                        Text('Ward No: $_wardNo'),
-                                    ],
-                                  ),
-                                
-                                const SizedBox(height: 24),
-                              ],
-                            ),
-                          ),
-                        ),
+                        // Price Breakdown
+                        _buildOrderSummary(),
+                        
+                        const SizedBox(height: 24),
                       ],
                     ),
                   ),
@@ -1289,21 +1179,20 @@ void _navigateToOrders() {
                             color: Colors.green,
                           ),
                         ),
-                        Row(
-                          children: [
-                            Text(
-                              '${_cartItems.length} items',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                            
-                            
-                           
-                            const SizedBox(width: 4),
-                            
-                          ],
+                        Text(
+                          '${_cartItems.length} items',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                          ),
                         ),
+                        if (_totalSavings > 0)
+                          Text(
+                            'You save: ₹${_totalSavings.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.green,
+                            ),
+                          ),
                       ],
                     ),
                   ),
