@@ -7,7 +7,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:harithapp/ONSHOP/onshopmainscreen.dart';
 import 'package:harithapp/Screens/Harith-Store/storepage.dart';
 import 'package:harithapp/Screens/applymembership.dart';
-import 'package:harithapp/Screens/catgeoryProducts.dart';
+import 'package:harithapp/Screens/Whatsappcart/catgeoryProducts.dart';
 import 'package:harithapp/Screens/harithsingleproduct.dart';
 import 'package:harithapp/Screens/search_page.dart';
 
@@ -19,7 +19,6 @@ class HomePage extends StatefulWidget {
   @override
   State<HomePage> createState() => _HomePageState();
 }
-
 
 /* ---------- Banner Image Widget ---------- */
 class BannerImage extends StatefulWidget {
@@ -41,31 +40,27 @@ class _BannerImageState extends State<BannerImage> {
     _getImageDimensions();
   }
 
-
-
-
-
   void _getImageDimensions() {
     final Image image = Image(image: CachedNetworkImageProvider(widget.url));
     image.image.resolve(const ImageConfiguration()).addListener(
-      ImageStreamListener((ImageInfo info, bool _) {
-        final double width = info.image.width.toDouble();
-        final double height = info.image.height.toDouble();
-        if (mounted) {
-          setState(() {
-            _imageHeight = (200 * height) / width;
-            _imageWidth = 200;
-          });
-        }
-      }, onError: (_, __) {
-        if (mounted) {
-          setState(() {
-            _imageHeight = 150;
-            _imageWidth = 200;
-          });
-        }
-      }),
-    );
+          ImageStreamListener((ImageInfo info, bool _) {
+            final double width = info.image.width.toDouble();
+            final double height = info.image.height.toDouble();
+            if (mounted) {
+              setState(() {
+                _imageHeight = (200 * height) / width;
+                _imageWidth = 200;
+              });
+            }
+          }, onError: (_, __) {
+            if (mounted) {
+              setState(() {
+                _imageHeight = 150;
+                _imageWidth = 200;
+              });
+            }
+          }),
+        );
   }
 
   @override
@@ -120,228 +115,230 @@ class _HomePageState extends State<HomePage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   /* ---------- AppBar with Drawer ---------- */
- /* ---------- AppBar with Drawer ---------- */
-PreferredSizeWidget get appBar {
-  return PreferredSize(
-    preferredSize: const Size.fromHeight(147),
-    child: AppBar(
-      backgroundColor: const Color.fromARGB(255, 116, 190, 119),
-      elevation: 0,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(22)),
-      ),
-     
-      flexibleSpace: SafeArea(
-        child: Padding(
-          padding:
-              const EdgeInsets.only(left: 16, right: 16, top: 20, bottom: 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Image.asset('assets/harithagramamlogowhite.png',
-                      height: 48, errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      height: 48,
-                      width: 48,
-                      color: Colors.white,
-                      child: const Icon(Icons.error),
-                    );
-                  }),
-                  const SizedBox(width: 8),
-                  StreamBuilder<DocumentSnapshot>(
-                    stream: FirebaseFirestore.instance
-                        .collection('harith-users')
-                        .doc(FirebaseAuth.instance.currentUser?.uid)
-                        .snapshots(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Welcome',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold)),
-                            Text('Harithagramam App',
-                                style: TextStyle(
-                                    color: Colors.white70, fontSize: 12)),
-                          ],
-                        );
-                      }
-
-                      if (snapshot.hasError || !snapshot.hasData || !snapshot.data!.exists) {
-                        return const Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Welcome',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold)),
-                            Text('Harithagramam App',
-                                style: TextStyle(
-                                    color: Colors.white70, fontSize: 12)),
-                          ],
-                        );
-                      }
-
-                      final userData = snapshot.data!.data() as Map<String, dynamic>;
-                      final userName = userData['fullName'] as String? ?? 'User';
-
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Welcome $userName',
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold)),
-                          const Text('Harithagramam App',
-                              style: TextStyle(
-                                  color: Colors.white70, fontSize: 12)),
-                        ],
-                      );
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              // Replace the TextField widget in the app bar (around line 84)
-GestureDetector(
-  onTap: () {
-    // Navigate to search page when tapped
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const SearchPage(),
-      ),
-    );
-  },
-  child: AbsorbPointer(
-    child: TextField(
-      decoration: InputDecoration(
-        hintText: 'Search products, categories...',
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding:
-            const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(24),
-          borderSide: BorderSide.none,
+  /* ---------- AppBar with Drawer ---------- */
+  PreferredSizeWidget get appBar {
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(147),
+      child: AppBar(
+        backgroundColor: const Color.fromARGB(255, 116, 190, 119),
+        elevation: 0,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(22)),
         ),
-        prefixIcon: const Icon(Icons.search, color: Colors.green),
-      ),
-      // Add these properties to make it look like a search field
-      readOnly: true,
-      enabled: false,
-    ),
-  ),
-),
-            ],
+        flexibleSpace: SafeArea(
+          child: Padding(
+            padding:
+                const EdgeInsets.only(left: 16, right: 16, top: 20, bottom: 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Image.asset('assets/harithagramamlogowhite.png', height: 48,
+                        errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        height: 48,
+                        width: 48,
+                        color: Colors.white,
+                        child: const Icon(Icons.error),
+                      );
+                    }),
+                    const SizedBox(width: 8),
+                    StreamBuilder<DocumentSnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('harith-users')
+                          .doc(FirebaseAuth.instance.currentUser?.uid)
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Welcome',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold)),
+                              Text('Harithagramam App',
+                                  style: TextStyle(
+                                      color: Colors.white70, fontSize: 12)),
+                            ],
+                          );
+                        }
+
+                        if (snapshot.hasError ||
+                            !snapshot.hasData ||
+                            !snapshot.data!.exists) {
+                          return const Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Welcome',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold)),
+                              Text('Harithagramam App',
+                                  style: TextStyle(
+                                      color: Colors.white70, fontSize: 12)),
+                            ],
+                          );
+                        }
+
+                        final userData =
+                            snapshot.data!.data() as Map<String, dynamic>;
+                        final userName =
+                            userData['fullName'] as String? ?? 'User';
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Welcome $userName',
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold)),
+                            const Text('Harithagramam App',
+                                style: TextStyle(
+                                    color: Colors.white70, fontSize: 12)),
+                          ],
+                        );
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                // Replace the TextField widget in the app bar (around line 84)
+                GestureDetector(
+                  onTap: () {
+                    // Navigate to search page when tapped
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const SearchPage(),
+                      ),
+                    );
+                  },
+                  child: AbsorbPointer(
+                    child: TextField(
+                      decoration: InputDecoration(
+                        hintText: 'Search products, categories...',
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(
+                            vertical: 0, horizontal: 16),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(24),
+                          borderSide: BorderSide.none,
+                        ),
+                        prefixIcon:
+                            const Icon(Icons.search, color: Colors.green),
+                      ),
+                      // Add these properties to make it look like a search field
+                      readOnly: true,
+                      enabled: false,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
-
-
- /* ---------- Banner ---------- */
+  /* ---------- Banner ---------- */
 /* ---------- Banner ---------- */
-Widget _buildBanner() {
-  return StreamBuilder<QuerySnapshot>(
-    stream: FirebaseFirestore.instance
-        .collection('harith-homepage_banners')
-        .snapshots(),
-    builder: (context, snapshot) {
-      if (snapshot.connectionState == ConnectionState.waiting) {
-        return _buildBannerShimmer();
-      }
+  Widget _buildBanner() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('harith-homepage_banners')
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _buildBannerShimmer();
+        }
 
-      if (snapshot.hasError) {
-        print('Banner Error: ${snapshot.error}');
-        return _buildErrorWidget('Failed to load banners');
-      }
+        if (snapshot.hasError) {
+          print('Banner Error: ${snapshot.error}');
+          return _buildErrorWidget('Failed to load banners');
+        }
 
-      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-        return _buildPlaceholderBanner();
-      }
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return _buildPlaceholderBanner();
+        }
 
-      final docs = snapshot.data!.docs;
-      final urls = <String>[];
-      
-      for (final doc in docs) {
-        final data = doc.data() as Map<String, dynamic>?;
-        if (data != null) {
-          for (int i = 1; i <= 11; i++) {
-            final bannerField = 'banner$i';
-            final bannerUrl = data[bannerField] as String?;
-            if (bannerUrl != null && bannerUrl.isNotEmpty) {
-              urls.add(bannerUrl);
+        final docs = snapshot.data!.docs;
+        final urls = <String>[];
+
+        for (final doc in docs) {
+          final data = doc.data() as Map<String, dynamic>?;
+          if (data != null) {
+            for (int i = 1; i <= 11; i++) {
+              final bannerField = 'banner$i';
+              final bannerUrl = data[bannerField] as String?;
+              if (bannerUrl != null && bannerUrl.isNotEmpty) {
+                urls.add(bannerUrl);
+              }
             }
           }
         }
-      }
 
-      if (urls.isEmpty) {
-        return _buildPlaceholderBanner();
-      }
+        if (urls.isEmpty) {
+          return _buildPlaceholderBanner();
+        }
 
-      return CarouselSlider.builder(
-        itemCount: urls.length,
-        options: CarouselOptions(
-          height: 255,
-          autoPlay: true,
-          enlargeCenterPage: true,
-          viewportFraction: 0.97,
-          autoPlayInterval: const Duration(seconds: 4),
-        ),
-        itemBuilder: (_, idx, __) => Container(
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              color: Colors.grey[100], // Background for transparent images
-              child: CachedNetworkImage(
-                imageUrl: urls[idx],
-                fit: BoxFit.contain, // Changed from cover to contain
-                width: double.infinity,
-                placeholder: (_, __) => Container(
-                  height: 210,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(16),
+        return CarouselSlider.builder(
+          itemCount: urls.length,
+          options: CarouselOptions(
+            height: 255,
+            autoPlay: true,
+            enlargeCenterPage: true,
+            viewportFraction: 0.97,
+            autoPlayInterval: const Duration(seconds: 4),
+          ),
+          itemBuilder: (_, idx, __) => Container(
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                color: Colors.grey[100], // Background for transparent images
+                child: CachedNetworkImage(
+                  imageUrl: urls[idx],
+                  fit: BoxFit.contain, // Changed from cover to contain
+                  width: double.infinity,
+                  placeholder: (_, __) => Container(
+                    height: 210,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Center(child: CircularProgressIndicator()),
                   ),
-                  child: const Center(child: CircularProgressIndicator()),
-                ),
-                errorWidget: (_, __, ___) => Container(
-                  height: 210,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.error, color: Colors.grey),
-                      SizedBox(height: 8),
-                      Text('Failed to load', style: TextStyle(color: Colors.grey)),
-                    ],
+                  errorWidget: (_, __, ___) => Container(
+                    height: 210,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error, color: Colors.grey),
+                        SizedBox(height: 8),
+                        Text('Failed to load',
+                            style: TextStyle(color: Colors.grey)),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-      );
-    },
-  );
-}
-
-
+        );
+      },
+    );
+  }
 
   Widget _buildBannerShimmer() {
     return Shimmer.fromColors(
@@ -402,9 +399,7 @@ Widget _buildBanner() {
   /* ---------- OnShop Banner ---------- */
   Widget _buildOnShopBanner() {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('appsettings')
-          .snapshots(),
+      stream: FirebaseFirestore.instance.collection('appsettings').snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           print('OnShop Banner Error: ${snapshot.error}');
@@ -420,7 +415,7 @@ Widget _buildBanner() {
         }
 
         final docs = snapshot.data!.docs;
-        
+
         // Check if onshopinharithagramam is true in any document
         bool showOnShopBanner = false;
         for (var doc in docs) {
@@ -470,7 +465,8 @@ Widget _buildBanner() {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.shopping_cart, size: 40, color: Colors.grey),
+                            Icon(Icons.shopping_cart,
+                                size: 40, color: Colors.grey),
                             SizedBox(height: 8),
                             Text(
                               'On Shop',
@@ -512,286 +508,275 @@ Widget _buildBanner() {
   }
 
   /* ---------- Haritha Gramam Store Banner ---------- */
-Widget _buildHarithaGramamStoreBanner() {
-  return StreamBuilder<QuerySnapshot>(
-    stream: FirebaseFirestore.instance
-        .collection('appsettings')
-        .snapshots(),
-    builder: (context, snapshot) {
-      if (snapshot.hasError) {
-        print('Haritha Gramam Store Banner Error: ${snapshot.error}');
-        return const SizedBox.shrink();
-      }
-
-      if (snapshot.connectionState == ConnectionState.waiting) {
-        return _buildHarithaGramamStoreBannerShimmer();
-      }
-
-      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-        return const SizedBox.shrink();
-      }
-
-      final docs = snapshot.data!.docs;
-      
-      // Check if harithagramamstorebanner is true in any document
-      bool showStoreBanner = false;
-      for (var doc in docs) {
-        final data = doc.data() as Map<String, dynamic>;
-        if (data['harithagramamstorebanner'] == true) {
-          showStoreBanner = true;
-          break;
+  Widget _buildHarithaGramamStoreBanner() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection('appsettings').snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          print('Haritha Gramam Store Banner Error: ${snapshot.error}');
+          return const SizedBox.shrink();
         }
-      }
 
-      if (!showStoreBanner) {
-        return const SizedBox.shrink();
-      }
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _buildHarithaGramamStoreBannerShimmer();
+        }
 
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: GestureDetector(
-          onTap: () {
-            _checkMembershipAndNavigate(context);
-          },
-          child: Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: const Color.fromARGB(255, 116, 190, 119),
-                width: 2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        final docs = snapshot.data!.docs;
+
+        // Check if harithagramamstorebanner is true in any document
+        bool showStoreBanner = false;
+        for (var doc in docs) {
+          final data = doc.data() as Map<String, dynamic>;
+          if (data['harithagramamstorebanner'] == true) {
+            showStoreBanner = true;
+            break;
+          }
+        }
+
+        if (!showStoreBanner) {
+          return const SizedBox.shrink();
+        }
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: GestureDetector(
+            onTap: () {
+              _checkMembershipAndNavigate(context);
+            },
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: const Color.fromARGB(255, 116, 190, 119),
+                  width: 2,
                 ),
-              ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color.fromARGB(255, 116, 190, 119),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.storefront,
-                      size: 32,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Harith Gramam Store',
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Visit harithagramam store and get great deals',
-                          style: TextStyle(
-                            color: Colors.grey[700],
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(
-                    Icons.arrow_forward_ios,
-                    size: 20,
-                    color: Color.fromARGB(255, 116, 190, 119),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color.fromARGB(255, 116, 190, 119),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.storefront,
+                        size: 32,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Harith Gramam Store',
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Visit harithagramam store and get great deals',
+                            style: TextStyle(
+                              color: Colors.grey[700],
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(
+                      Icons.arrow_forward_ios,
+                      size: 20,
+                      color: Color.fromARGB(255, 116, 190, 119),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
-        ),
-      );
-    },
-  );
-}
-
-
-
+        );
+      },
+    );
+  }
 
 /* ---------- Check Membership Function ---------- */
-Future<void> _checkMembershipAndNavigate(BuildContext context) async {
-  try {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      _showMembershipRequiredDialog(context, isLoggedOut: true);
-      return;
-    }
+  Future<void> _checkMembershipAndNavigate(BuildContext context) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        _showMembershipRequiredDialog(context, isLoggedOut: true);
+        return;
+      }
 
-    // Show loading indicator
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(
-          color: Color.fromARGB(255, 116, 190, 119),
-        ),
-      ),
-    );
-
-    // Check user membership in Firestore
-    final userDoc = await FirebaseFirestore.instance
-        .collection('harith-users')
-        .doc(user.uid)
-        .get();
-
-    // Close loading dialog
-    Navigator.pop(context);
-
-    if (!userDoc.exists) {
-      _showMembershipRequiredDialog(context);
-      return;
-    }
-
-    final userData = userDoc.data() as Map<String, dynamic>;
-    final membershipId = userData['membershipId']?.toString();
-    
-    // Check if user has membership
-    final hasMembership = membershipId != null && 
-                          membershipId.isNotEmpty && 
-                          membershipId != 'null';
-    
-    if (hasMembership) {
-      // User has membership, navigate to store page
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => HarithStorePage(),
-        ),
-      );
-    } else {
-      // User doesn't have membership, show dialog
-      _showMembershipRequiredDialog(context);
-    }
-    
-  } catch (e) {
-    print('Error checking membership: $e');
-    // Close loading dialog if still open
-    if (Navigator.canPop(context)) {
-      Navigator.pop(context);
-    }
-    _showMembershipRequiredDialog(context, error: e.toString());
-  }
-}
-
-
-
-/* ---------- Show Membership Required Dialog ---------- */
-void _showMembershipRequiredDialog(BuildContext context, {bool isLoggedOut = false, String? error}) {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Row(
-        children: [
-          Icon(
-            Icons.card_membership,
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(
             color: Color.fromARGB(255, 116, 190, 119),
           ),
-          SizedBox(width: 8),
-          Text(
-            'Membership Required',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
+        ),
+      );
+
+      // Check user membership in Firestore
+      final userDoc = await FirebaseFirestore.instance
+          .collection('harith-users')
+          .doc(user.uid)
+          .get();
+
+      // Close loading dialog
+      Navigator.pop(context);
+
+      if (!userDoc.exists) {
+        _showMembershipRequiredDialog(context);
+        return;
+      }
+
+      final userData = userDoc.data() as Map<String, dynamic>;
+      final membershipId = userData['membershipId']?.toString();
+
+      // Check if user has membership
+      final hasMembership = membershipId != null &&
+          membershipId.isNotEmpty &&
+          membershipId != 'null';
+
+      if (hasMembership) {
+        // User has membership, navigate to store page
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => HarithStorePage(),
+          ),
+        );
+      } else {
+        // User doesn't have membership, show dialog
+        _showMembershipRequiredDialog(context);
+      }
+    } catch (e) {
+      print('Error checking membership: $e');
+      // Close loading dialog if still open
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+      _showMembershipRequiredDialog(context, error: e.toString());
+    }
+  }
+
+/* ---------- Show Membership Required Dialog ---------- */
+  void _showMembershipRequiredDialog(BuildContext context,
+      {bool isLoggedOut = false, String? error}) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(
+              Icons.card_membership,
               color: Color.fromARGB(255, 116, 190, 119),
-              fontSize: 17
+            ),
+            SizedBox(width: 8),
+            Text(
+              'Membership Required',
+              style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Color.fromARGB(255, 116, 190, 119),
+                  fontSize: 17),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (isLoggedOut)
+              const Text('Please login to access Harith Gramam Store.')
+            else if (error != null)
+              Text('Error checking membership: $error')
+            else
+              const Text(
+                  'Harith Gramam Store products are only available for Harithagramam Members.'),
+            const SizedBox(height: 8),
+            const Text(
+              'Become a member to enjoy exclusive products and discounts.',
+              style: TextStyle(color: Colors.grey, fontSize: 13),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Colors.grey),
             ),
           ),
-        ],
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (isLoggedOut)
-            const Text('Please login to access Harith Gramam Store.')
-          else if (error != null)
-            Text('Error checking membership: $error')
-          else
-            const Text('Harith Gramam Store products are only available for Harithagramam Members.'),
-          
-          const SizedBox(height: 8),
-          const Text(
-            'Become a member to enjoy exclusive products and discounts.',
-            style: TextStyle(color: Colors.grey, fontSize: 13),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context); // Close this dialog
+              _navigateToMembershipApplication(context);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color.fromARGB(255, 116, 190, 119),
+            ),
+            child: const Text('Apply for Membership'),
           ),
         ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text(
-            'Cancel',
-            style: TextStyle(color: Colors.grey),
-          ),
-        ),
-        ElevatedButton(
-          onPressed: () {
-            Navigator.pop(context); // Close this dialog
-            _navigateToMembershipApplication(context);
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color.fromARGB(255, 116, 190, 119),
-          ),
-          child: const Text('Apply for Membership'),
-        ),
-      ],
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-    ),
-  );
-}
-
-/* ---------- Navigate to Membership Application ---------- */
-void _navigateToMembershipApplication(BuildContext context) {
-  // Import the MembershipApplicationPage at the top of your file:
-  // import 'package:harithapp/Screens/applymembership.dart';
-  
-  Navigator.of(context).push(
-    MaterialPageRoute(
-      builder: (_) => const MembershipApplicationPage(),
-    ),
-  );
-}
-
-
-
-Widget _buildHarithaGramamStoreBannerShimmer() {
-  return Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-    child: Shimmer.fromColors(
-      baseColor: Colors.grey[300]!,
-      highlightColor: Colors.grey[100]!,
-      child: Container(
-        width: double.infinity,
-        height: 100,
-        decoration: BoxDecoration(
-          color: Colors.white,
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
+/* ---------- Navigate to Membership Application ---------- */
+  void _navigateToMembershipApplication(BuildContext context) {
+    // Import the MembershipApplicationPage at the top of your file:
+    // import 'package:harithapp/Screens/applymembership.dart';
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const MembershipApplicationPage(),
+      ),
+    );
+  }
+
+  Widget _buildHarithaGramamStoreBannerShimmer() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Shimmer.fromColors(
+        baseColor: Colors.grey[300]!,
+        highlightColor: Colors.grey[100]!,
+        child: Container(
+          width: double.infinity,
+          height: 100,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+      ),
+    );
+  }
 
   /* ---------- Category Grid ---------- */
   Widget _buildCategoryGrid() {
@@ -840,18 +825,17 @@ Widget _buildHarithaGramamStoreBannerShimmer() {
               return GestureDetector(
                 onTap: () {
                   Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => CategoryProductsPage(
-                            categoryName: cat['name']!,
-                          ),
-                        ),
-                      );
+                    MaterialPageRoute(
+                      builder: (_) => CategoryProductsPage(
+                        categoryName: cat['name']!,
+                      ),
+                    ),
+                  );
                 },
                 child: Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
-
                   ),
                   padding: const EdgeInsets.all(4),
                   child: Column(
@@ -910,81 +894,83 @@ Widget _buildHarithaGramamStoreBannerShimmer() {
 
   /* ---------- Featured Products ---------- */
   /* ---------- Featured Products ---------- */
-Widget _buildProducts() {
-  return FutureBuilder<QuerySnapshot>(
-    future: FirebaseFirestore.instance
-        .collection('harith-products')
-        .where('display', isEqualTo: true)
-        .where('featured', isEqualTo: true) // Add this condition
-        .get(),
-    builder: (context, snapshot) {
-      if (snapshot.hasError) {
-        print('Products Error: ${snapshot.error}');
-        return _buildSectionError('Failed to load featured products');
-      }
+  Widget _buildProducts() {
+    return FutureBuilder<QuerySnapshot>(
+      future: FirebaseFirestore.instance
+          .collection('harith-products')
+          .where('display', isEqualTo: true)
+          .where('featured', isEqualTo: true) // Add this condition
+          .get(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          print('Products Error: ${snapshot.error}');
+          return _buildSectionError('Failed to load featured products');
+        }
 
-      if (snapshot.connectionState == ConnectionState.waiting) {
-        return _buildProductsShimmer();
-      }
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _buildProductsShimmer();
+        }
 
-      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-        return const SizedBox.shrink(); // Hide section if no featured products
-      }
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const SizedBox
+              .shrink(); // Hide section if no featured products
+        }
 
-      final items = snapshot.data!.docs;
+        final items = snapshot.data!.docs;
 
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Text(
-              'Featured Products',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(
+                'Featured Products',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
             ),
-          ),
-          SizedBox(
-            height: 240,
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              scrollDirection: Axis.horizontal,
-              itemCount: items.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (_, idx) {
-                final doc = items[idx];
-                final p = doc.data() as Map<String, dynamic>;
-                final productId = doc.id;
+            SizedBox(
+              height: 240,
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                scrollDirection: Axis.horizontal,
+                itemCount: items.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                itemBuilder: (_, idx) {
+                  final doc = items[idx];
+                  final p = doc.data() as Map<String, dynamic>;
+                  final productId = doc.id;
 
-                return ProductCard(
-                  name: p['name'] ?? 'Product Name',
-                  imageUrl: p['image_url'] ?? '',
-                  discountedPrice: p['discountedprice']?.toString() ?? '',
-                  offerPrice: p['offerprice']?.toString() ??
-                      p['discountedprice']?.toString() ??
-                      '',
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => SingleProductPage(
-                          product: {
-                            ...p,
-                            'id': productId,
-                          },
+                  return ProductCard(
+                    name: p['name'] ?? 'Product Name',
+                    imageUrl: p['image_url'] ?? '',
+                    discountedPrice: p['discountedprice']?.toString() ?? '',
+                    offerPrice: p['offerprice']?.toString() ??
+                        p['discountedprice']?.toString() ??
+                        '',
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => SingleProductPage(
+                            product: {
+                              ...p,
+                              'id': productId,
+                            },
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                  isGridItem: false,
-                );
-              },
+                      );
+                    },
+                    isGridItem: false,
+                  );
+                },
+              ),
             ),
-          ),
-          const SizedBox(height: 20)
-        ],
-      );
-    },
-  );
-}
+            const SizedBox(height: 20)
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildProductsShimmer() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1123,109 +1109,112 @@ Widget _buildProducts() {
   }
 
   /* ---------- Sponsored Ads ---------- */
- Widget _buildSponsoredAds() {
-  return StreamBuilder<QuerySnapshot>(
-    stream: FirebaseFirestore.instance
-        .collection('harith-sponsored-ads')
-        .snapshots(),
-    builder: (context, snapshot) {
-      if (snapshot.hasError) {
-        print('Sponsored Ads Error: ${snapshot.error}');
-        return const SizedBox.shrink();
-      }
+  Widget _buildSponsoredAds() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('harith-sponsored-ads')
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          print('Sponsored Ads Error: ${snapshot.error}');
+          return const SizedBox.shrink();
+        }
 
-      if (snapshot.connectionState == ConnectionState.waiting) {
-        return const SizedBox.shrink();
-      }
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox.shrink();
+        }
 
-      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-        return const SizedBox.shrink();
-      }
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const SizedBox.shrink();
+        }
 
-      final docs = snapshot.data!.docs;
-      
-      // Collect all available ad URLs with proper null safety
-      final urls = <String>[];
-      
-      for (final doc in docs) {
-        final data = doc.data() as Map<String, dynamic>?;
-        if (data != null) {
-          // Check each possible ad field and add if it exists and is not empty
-          for (int i = 1; i <= 9; i++) {
-            final adField = 'ad$i';
-            final adUrl = data[adField] as String?;
-            if (adUrl != null && adUrl.isNotEmpty) {
-              urls.add(adUrl);
+        final docs = snapshot.data!.docs;
+
+        // Collect all available ad URLs with proper null safety
+        final urls = <String>[];
+
+        for (final doc in docs) {
+          final data = doc.data() as Map<String, dynamic>?;
+          if (data != null) {
+            // Check each possible ad field and add if it exists and is not empty
+            for (int i = 1; i <= 9; i++) {
+              final adField = 'ad$i';
+              final adUrl = data[adField] as String?;
+              if (adUrl != null && adUrl.isNotEmpty) {
+                urls.add(adUrl);
+              }
             }
           }
         }
-      }
 
-      if (urls.isEmpty) return const SizedBox.shrink();
+        if (urls.isEmpty) return const SizedBox.shrink();
 
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Sponsored Ads',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            CarouselSlider.builder(
-              itemCount: urls.length,
-              options: CarouselOptions(
-                height: 340,
-                autoPlay: true,
-                enlargeCenterPage: true,
-                viewportFraction: 0.97,
-                autoPlayInterval: const Duration(seconds: 4),
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Sponsored Ads',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              itemBuilder: (_, idx, __) => Container(
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    color: Colors.grey[100], // Background for transparent images
-                    child: CachedNetworkImage(
-                      imageUrl: urls[idx],
-                      fit: BoxFit.contain, // Changed from cover to contain
-                      width: double.infinity,
-                      placeholder: (_, __) => Container(
-                        height: 280,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(16),
+              const SizedBox(height: 8),
+              CarouselSlider.builder(
+                itemCount: urls.length,
+                options: CarouselOptions(
+                  height: 340,
+                  autoPlay: true,
+                  enlargeCenterPage: true,
+                  viewportFraction: 0.97,
+                  autoPlayInterval: const Duration(seconds: 4),
+                ),
+                itemBuilder: (_, idx, __) => Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      color:
+                          Colors.grey[100], // Background for transparent images
+                      child: CachedNetworkImage(
+                        imageUrl: urls[idx],
+                        fit: BoxFit.contain, // Changed from cover to contain
+                        width: double.infinity,
+                        placeholder: (_, __) => Container(
+                          height: 280,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child:
+                              const Center(child: CircularProgressIndicator()),
                         ),
-                        child: const Center(child: CircularProgressIndicator()),
-                      ),
-                      errorWidget: (_, __, ___) => Container(
-                        height: 280,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.error, color: Colors.grey),
-                            SizedBox(height: 8),
-                            Text('Failed to load', style: TextStyle(color: Colors.grey)),
-                          ],
+                        errorWidget: (_, __, ___) => Container(
+                          height: 280,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: const Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.error, color: Colors.grey),
+                              SizedBox(height: 8),
+                              Text('Failed to load',
+                                  style: TextStyle(color: Colors.grey)),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
-      );
-    },
-  );
-}
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1233,7 +1222,6 @@ Widget _buildProducts() {
       key: _scaffoldKey,
       backgroundColor: Colors.white,
       appBar: appBar,
-
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -1242,7 +1230,7 @@ Widget _buildProducts() {
             const SizedBox(height: 16),
             _buildCategoryGrid(),
             _buildOnShopBanner(), // Added OnShop banner between categories and featured products
-              _buildHarithaGramamStoreBanner(), // Add this line - NEW SECTION
+            _buildHarithaGramamStoreBanner(), // Add this line - NEW SECTION
             _buildPromoBanner(),
             _buildProducts(),
             _buildSponsoredAds(),

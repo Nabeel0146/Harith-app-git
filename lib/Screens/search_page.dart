@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:harithapp/Screens/catgeoryProducts.dart';
+import 'package:harithapp/Screens/Whatsappcart/catgeoryProducts.dart';
 import 'package:harithapp/Screens/harithsingleproduct.dart';
 import 'package:harithapp/models/search_result.dart';
 

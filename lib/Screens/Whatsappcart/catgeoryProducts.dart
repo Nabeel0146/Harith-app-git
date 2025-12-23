@@ -3,12 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:harithapp/Screens/Whatsappcart/whatsappcart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
 
 import 'package:harithapp/Screens/harithsingleproduct.dart';
-import 'package:harithapp/Screens/Harith-Store/cartpage.dart';
-import 'package:harithapp/widgets/productcard.dart';
+
 
 class CategoryProductsPage extends StatefulWidget {
   final String categoryName;
@@ -22,9 +23,13 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   
-  List<Map<String, dynamic>> _cartItems = [];
+  List<Map<String, dynamic>> _whatsappCartItems = [];
   late SharedPreferences _prefs;
   bool _isLoadingCart = true;
+  
+  // WhatsApp configuration
+  final String _whatsappNumber = '917012345678'; // Replace with your WhatsApp number
+  final String _whatsappMessageHeader = '🛒 *NEW ORDER REQUEST* 🛒\n\n';
   
   // Helper method to safely parse to double
   double _parseToDouble(dynamic value) {
@@ -38,15 +43,15 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
   @override
   void initState() {
     super.initState();
-    _initializeCart();
+    _initializeWhatsAppCart();
   }
 
-  Future<void> _initializeCart() async {
+  Future<void> _initializeWhatsAppCart() async {
     try {
       _prefs = await SharedPreferences.getInstance();
-      await _loadCartFromPrefs();
+      await _loadWhatsAppCartFromPrefs();
     } catch (e) {
-      print('Error initializing cart: $e');
+      print('Error initializing WhatsApp cart: $e');
     } finally {
       setState(() {
         _isLoadingCart = false;
@@ -54,67 +59,68 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
     }
   }
 
-  // Load cart from SharedPreferences
-  Future<void> _loadCartFromPrefs() async {
+  // Load WhatsApp cart from SharedPreferences
+  Future<void> _loadWhatsAppCartFromPrefs() async {
     try {
-      final cartJson = _prefs.getString('harith_store_cart');
+      final cartJson = _prefs.getString('harith_whatsapp_cart');
       if (cartJson != null && cartJson.isNotEmpty) {
         final cartData = (jsonDecode(cartJson) as List).cast<Map<String, dynamic>>();
         setState(() {
-          _cartItems = cartData;
+          _whatsappCartItems = cartData;
         });
-        print('Loaded ${_cartItems.length} items from cart');
+        print('Loaded ${_whatsappCartItems.length} items from WhatsApp cart');
       }
     } catch (e) {
-      print('Error loading cart from prefs: $e');
-      await _prefs.remove('harith_store_cart');
+      print('Error loading WhatsApp cart from prefs: $e');
+      await _prefs.remove('harith_whatsapp_cart');
     }
   }
 
-  // Save cart to SharedPreferences
-  Future<void> _saveCartToPrefs() async {
+  // Save WhatsApp cart to SharedPreferences
+  Future<void> _saveWhatsAppCartToPrefs() async {
     try {
-      final cartJson = jsonEncode(_cartItems);
-      await _prefs.setString('harith_store_cart', cartJson);
+      final cartJson = jsonEncode(_whatsappCartItems);
+      await _prefs.setString('harith_whatsapp_cart', cartJson);
     } catch (e) {
-      print('Error saving cart to prefs: $e');
+      print('Error saving WhatsApp cart to prefs: $e');
     }
   }
 
-  // Navigate to cart page
-  void _navigateToCart() {
+  // Navigate to WhatsApp cart page
+  void _navigateToWhatsAppCart() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => HarithCartPage(
-          cartItems: _cartItems,
+        builder: (_) => WhatsAppCartPage(
+          cartItems: _whatsappCartItems,
           onCartUpdate: (updatedCart) {
             setState(() {
-              _cartItems = updatedCart;
+              _whatsappCartItems = updatedCart;
             });
-            _saveCartToPrefs();
-            _initializeCart();
+            _saveWhatsAppCartToPrefs();
+            _initializeWhatsAppCart();
           },
+          onPlaceOrder: _placeOrderViaWhatsApp,
         ),
       ),
     );
   }
 
-  // Add item to cart
-  void _addToCart(Map<String, dynamic> product) {
+  // Add item to WhatsApp cart
+  void _addToWhatsAppCart(Map<String, dynamic> product) {
     final String productId = product['id'];
     final int existingIndex =
-        _cartItems.indexWhere((item) => item['id'] == productId);
+        _whatsappCartItems.indexWhere((item) => item['id'] == productId);
 
     if (existingIndex != -1) {
       // Update quantity if already in cart
       setState(() {
-        _cartItems[existingIndex]['quantity'] =
-            (_cartItems[existingIndex]['quantity'] ?? 0) + 1;
+        _whatsappCartItems[existingIndex]['quantity'] =
+            (_whatsappCartItems[existingIndex]['quantity'] ?? 0) + 1;
       });
     } else {
       // Add new item to cart
       setState(() {
-        _cartItems.add({
+        _whatsappCartItems.add({
           'id': productId,
           'name': product['name'],
           'price': _parseToDouble(product['discountedprice'] ?? 0.0),
@@ -123,70 +129,71 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
               : null,
           'image': product['image_url'] ?? '',
           'quantity': 1,
+          'category': product['category'] ?? widget.categoryName,
           'addedAt': DateTime.now().toIso8601String(),
         });
       });
     }
 
-    _saveCartToPrefs();
+    _saveWhatsAppCartToPrefs();
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${product['name']} added to cart'),
-        backgroundColor: const Color.fromARGB(255, 116, 190, 119),
+        content: Text('${product['name']} added to WhatsApp Cart'),
+        backgroundColor: Colors.green,
         duration: const Duration(seconds: 2),
         action: SnackBarAction(
           label: 'View Cart',
-          onPressed: _navigateToCart,
+          onPressed: _navigateToWhatsAppCart,
         ),
       ),
     );
   }
 
-  // Remove item from cart
-  void _removeFromCart(String productId) {
+  // Remove item from WhatsApp cart
+  void _removeFromWhatsAppCart(String productId) {
     setState(() {
-      _cartItems.removeWhere((item) => item['id'] == productId);
+      _whatsappCartItems.removeWhere((item) => item['id'] == productId);
     });
-    _saveCartToPrefs();
+    _saveWhatsAppCartToPrefs();
   }
 
-  // Update quantity in cart
-  void _updateQuantity(String productId, int quantity) {
+  // Update quantity in WhatsApp cart
+  void _updateWhatsAppCartQuantity(String productId, int quantity) {
     if (quantity <= 0) {
-      _removeFromCart(productId);
+      _removeFromWhatsAppCart(productId);
       return;
     }
 
-    final cartIndex = _cartItems.indexWhere((item) => item['id'] == productId);
+    final cartIndex = _whatsappCartItems.indexWhere((item) => item['id'] == productId);
     if (cartIndex != -1) {
       setState(() {
-        _cartItems[cartIndex]['quantity'] = quantity;
+        _whatsappCartItems[cartIndex]['quantity'] = quantity;
       });
-      _saveCartToPrefs();
+      _saveWhatsAppCartToPrefs();
     }
   }
 
-  // Check if product is in cart
-  bool _isProductInCart(String productId) {
-    return _cartItems.any((item) => item['id'] == productId);
+  // Check if product is in WhatsApp cart
+  bool _isProductInWhatsAppCart(String productId) {
+    return _whatsappCartItems.any((item) => item['id'] == productId);
   }
 
-  // Get cart quantity for product
-  int _getCartQuantity(String productId) {
-    final cartItem = _cartItems.firstWhere(
+  // Get WhatsApp cart quantity for product
+  int _getWhatsAppCartQuantity(String productId) {
+    final cartItem = _whatsappCartItems.firstWhere(
       (item) => item['id'] == productId,
       orElse: () => {},
     );
     return cartItem.isNotEmpty ? (cartItem['quantity'] ?? 0) : 0;
   }
 
-  // Show cart preview
-  void _showCartPreview() {
-    if (_cartItems.isEmpty) {
+  // Show WhatsApp cart preview
+  void _showWhatsAppCartPreview() {
+    if (_whatsappCartItems.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Your cart is empty'),
+          content: Text('Your WhatsApp cart is empty'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -202,7 +209,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
         int totalItems = 0;
         double totalAmount = 0.0;
         
-        for (var item in _cartItems) {
+        for (var item in _whatsappCartItems) {
           final quantity = item['quantity'] is int ? item['quantity'] as int : 0;
           totalItems += quantity;
           final price = item['offerPrice'] ?? item['price'] ?? 0.0;
@@ -215,12 +222,18 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Your Cart',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+              Row(
+                children: [
+                  Icon(Icons.message, color: Colors.green, size: 24),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'WhatsApp Cart',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
               
@@ -240,7 +253,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Color.fromARGB(255, 116, 190, 119),
+                      color: Colors.green,
                     ),
                   ),
                 ],
@@ -254,9 +267,9 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
               Expanded(
                 child: ListView.builder(
                   shrinkWrap: true,
-                  itemCount: _cartItems.length,
+                  itemCount: _whatsappCartItems.length,
                   itemBuilder: (context, index) {
-                    final item = _cartItems[index];
+                    final item = _whatsappCartItems[index];
                     final price = item['offerPrice'] ?? item['price'] ?? 0.0;
                     final quantity = item['quantity'] is int ? item['quantity'] as int : 0;
                     
@@ -287,23 +300,23 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                         overflow: TextOverflow.ellipsis,
                       ),
                       subtitle: Text(
-                        '₹${price.toStringAsFixed(2)} × $quantity = ₹${(price * quantity).toStringAsFixed(2)}',
+                        '₹${price.toStringAsFixed(2)} × $quantity',
                       ),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
                             icon: const Icon(Icons.remove, size: 18),
-                            onPressed: () => _updateQuantity(item['id'], quantity - 1),
+                            onPressed: () => _updateWhatsAppCartQuantity(item['id'], quantity - 1),
                           ),
                           Text('$quantity'),
                           IconButton(
                             icon: const Icon(Icons.add, size: 18),
-                            onPressed: () => _updateQuantity(item['id'], quantity + 1),
+                            onPressed: () => _updateWhatsAppCartQuantity(item['id'], quantity + 1),
                           ),
                           IconButton(
                             icon: const Icon(Icons.delete_outline, color: Colors.red),
-                            onPressed: () => _removeFromCart(item['id']),
+                            onPressed: () => _removeFromWhatsAppCart(item['id']),
                           ),
                         ],
                       ),
@@ -322,7 +335,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                     child: OutlinedButton(
                       onPressed: () {
                         Navigator.pop(context);
-                        _clearCart();
+                        _clearWhatsAppCart();
                       },
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.red,
@@ -333,15 +346,16 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: ElevatedButton(
+                    child: ElevatedButton.icon(
                       onPressed: () {
                         Navigator.pop(context);
-                        _navigateToCart();
+                        _navigateToWhatsAppCart();
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color.fromARGB(255, 116, 190, 119),
+                        backgroundColor: Colors.green,
                       ),
-                      child: const Text('Go to Cart'),
+                      icon: const Icon(Icons.message, color: Colors.white),
+                      label: const Text('Go to Cart'),
                     ),
                   ),
                 ],
@@ -353,13 +367,13 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
     );
   }
 
-  // Clear cart
-  void _clearCart() {
+  // Clear WhatsApp cart
+  void _clearWhatsAppCart() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Clear Cart'),
-        content: const Text('Remove all items from cart?'),
+        title: const Text('Clear WhatsApp Cart'),
+        content: const Text('Remove all items from WhatsApp cart?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -368,13 +382,13 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
           TextButton(
             onPressed: () {
               setState(() {
-                _cartItems.clear();
+                _whatsappCartItems.clear();
               });
-              _saveCartToPrefs();
+              _saveWhatsAppCartToPrefs();
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Cart cleared successfully'),
+                  content: Text('WhatsApp cart cleared successfully'),
                   backgroundColor: Colors.green,
                 ),
               );
@@ -389,20 +403,120 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
     );
   }
 
-  // Build floating cart button
-  Widget _buildCartFloatingButton() {
-    if (_cartItems.isEmpty) {
+  // Place order via WhatsApp
+  Future<void> _placeOrderViaWhatsApp(List<Map<String, dynamic>> cartItems) async {
+    if (cartItems.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cart is empty. Add items to place an order.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Generate order message
+    String orderMessage = _whatsappMessageHeader;
+    
+    // Add customer info if available
+    final user = _auth.currentUser;
+    if (user != null) {
+      orderMessage += '👤 *Customer:* ${user.displayName ?? user.email ?? 'N/A'}\n';
+    }
+    
+    orderMessage += '📅 *Date:* ${DateTime.now().toString().split(' ')[0]}\n';
+    orderMessage += '⏰ *Time:* ${DateTime.now().toString().split(' ')[1].substring(0, 8)}\n\n';
+    
+    // Add items
+    orderMessage += '📋 *ORDER ITEMS:*\n';
+    orderMessage += '════════════════════\n\n';
+    
+    double totalAmount = 0.0;
+    int totalItems = 0;
+    
+    for (var item in cartItems) {
+      final quantity = item['quantity'] is int ? item['quantity'] as int : 0;
+      final price = item['offerPrice'] ?? item['price'] ?? 0.0;
+      final itemTotal = price * quantity;
+      
+      orderMessage += '🔹 *${item['name']}*\n';
+      orderMessage += '   Quantity: $quantity\n';
+      orderMessage += '   Price: ₹${price.toStringAsFixed(2)} each\n';
+      orderMessage += '   Total: ₹${itemTotal.toStringAsFixed(2)}\n';
+      orderMessage += '   ─────────────\n';
+      
+      totalItems += quantity;
+      totalAmount += itemTotal;
+    }
+    
+    // Add summary
+    orderMessage += '\n════════════════════\n';
+    orderMessage += '📊 *ORDER SUMMARY:*\n';
+    orderMessage += 'Total Items: $totalItems\n';
+    orderMessage += 'Total Amount: *₹${totalAmount.toStringAsFixed(2)}*\n\n';
+    
+    // Add footer
+    orderMessage += '📍 *Category:* ${widget.categoryName}\n';
+    orderMessage += '📱 *Sent via:* Harith App\n';
+    orderMessage += '────────────────────\n';
+    orderMessage += 'Please confirm this order and provide delivery details.\n';
+    orderMessage += 'Thank you! 🙏';
+
+    // Encode the message for URL
+    final encodedMessage = Uri.encodeComponent(orderMessage);
+    
+    // Create WhatsApp URL
+    final whatsappUrl = 'https://wa.me/$_whatsappNumber?text=$encodedMessage';
+    
+    try {
+      if (await canLaunch(whatsappUrl)) {
+        await launch(whatsappUrl);
+        
+        // Clear cart after successful order placement
+        setState(() {
+          _whatsappCartItems.clear();
+        });
+        await _saveWhatsAppCartToPrefs();
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Order sent to WhatsApp successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not launch WhatsApp. Please install WhatsApp first.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error launching WhatsApp: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // Build floating WhatsApp cart button
+  Widget _buildWhatsAppCartFloatingButton() {
+    if (_whatsappCartItems.isEmpty) {
       return const SizedBox.shrink();
     }
     
     int totalItems = 0;
-    for (var item in _cartItems) {
+    for (var item in _whatsappCartItems) {
       final quantity = item['quantity'] is int ? item['quantity'] as int : 0;
       totalItems += quantity;
     }
     
     double totalAmount = 0.0;
-    for (var item in _cartItems) {
+    for (var item in _whatsappCartItems) {
       final price = item['offerPrice'] ?? item['price'] ?? 0.0;
       final quantity = item['quantity'] is int ? item['quantity'] as int : 0;
       totalAmount += (price * quantity);
@@ -412,15 +526,15 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
       bottom: 16,
       right: 16,
       child: FloatingActionButton.extended(
-        onPressed: _navigateToCart,
-        backgroundColor: const Color.fromARGB(255, 116, 190, 119),
+        onPressed: _navigateToWhatsAppCart,
+        backgroundColor: Colors.green,
         foregroundColor: Colors.white,
         icon: Badge(
           label: Text('$totalItems'),
           isLabelVisible: true,
           backgroundColor: Colors.orange,
           textColor: Colors.white,
-          child: const Icon(Icons.shopping_cart),
+          child: const Icon(Icons.message),
         ),
         label: Text(
           '₹${totalAmount.toStringAsFixed(2)}',
@@ -500,7 +614,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                   const Icon(
                     Icons.category_outlined,
                     size: 80,
-                    color: Color.fromARGB(255, 116, 190, 119),
+                    color: Colors.green,
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -546,15 +660,15 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                   crossAxisCount: 2,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
-                  childAspectRatio: 0.75,
+                  childAspectRatio: 0.65,
                 ),
                 itemCount: filteredProducts.length,
                 itemBuilder: (context, index) {
                   final doc = filteredProducts[index];
                   final p = doc.data() as Map<String, dynamic>;
                   final productId = doc.id;
-                  final bool isInCart = _isProductInCart(productId);
-                  final int cartQuantity = isInCart ? _getCartQuantity(productId) : 0;
+                  final bool isInWhatsAppCart = _isProductInWhatsAppCart(productId);
+                  final int cartQuantity = isInWhatsAppCart ? _getWhatsAppCartQuantity(productId) : 0;
                   
                   // Safely parse prices
                   final double discountedPrice = _parseToDouble(p['discountedprice']);
@@ -607,7 +721,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                                           fit: BoxFit.cover,
                                           placeholder: (_, __) => Center(
                                             child: CircularProgressIndicator(
-                                              color: Colors.green[400],
+                                              color: Colors.green,
                                             ),
                                           ),
                                           errorWidget: (_, __, ___) => Center(
@@ -688,14 +802,14 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                           ],
                         ),
 
-                        // Cart button overlay
+                        // WhatsApp Cart button overlay
                         Positioned(
                           bottom: 12,
                           right: 12,
-                          child: isInCart
+                          child: isInWhatsAppCart
                               ? Container(
                                   decoration: BoxDecoration(
-                                    color: const Color.fromARGB(255, 116, 190, 119),
+                                    color: Colors.green,
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Row(
@@ -705,7 +819,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                                         icon: const Icon(Icons.remove,
                                             size: 18, color: Colors.white),
                                         onPressed: () {
-                                          _updateQuantity(productId, cartQuantity - 1);
+                                          _updateWhatsAppCartQuantity(productId, cartQuantity - 1);
                                         },
                                         padding: EdgeInsets.zero,
                                         constraints: const BoxConstraints(),
@@ -726,7 +840,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                                         icon: const Icon(Icons.add,
                                             size: 18, color: Colors.white),
                                         onPressed: () {
-                                          _updateQuantity(productId, cartQuantity + 1);
+                                          _updateWhatsAppCartQuantity(productId, cartQuantity + 1);
                                         },
                                         padding: EdgeInsets.zero,
                                         constraints: const BoxConstraints(),
@@ -735,11 +849,11 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                                   ),
                                 )
                               : FloatingActionButton.small(
-                                  onPressed: () => _addToCart({
+                                  onPressed: () => _addToWhatsAppCart({
                                     ...p,
                                     'id': productId,
                                   }),
-                                  backgroundColor: const Color.fromARGB(255, 116, 190, 119),
+                                  backgroundColor: Colors.green,
                                   foregroundColor: Colors.white,
                                   child: const Icon(Icons.add_shopping_cart, size: 20),
                                 ),
@@ -758,16 +872,16 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
 
   @override
   Widget build(BuildContext context) {
-    int totalCartItems = 0;
-    for (var item in _cartItems) {
+    int totalWhatsAppCartItems = 0;
+    for (var item in _whatsappCartItems) {
       final quantity = item['quantity'] is int ? item['quantity'] as int : 0;
-      totalCartItems += quantity;
+      totalWhatsAppCartItems += quantity;
     }
 
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: const Color.fromARGB(255, 116, 190, 119),
+        backgroundColor: Colors.green,
         title: Text(
           widget.categoryName,
           style: const TextStyle(
@@ -778,25 +892,25 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
         elevation: 0,
         centerTitle: true,
         actions: [
-          // Cart button with badge
+          // WhatsApp Cart button with badge
           IconButton(
             icon: Badge(
-              label: Text('$totalCartItems'),
-              isLabelVisible: totalCartItems > 0,
+              label: Text('$totalWhatsAppCartItems'),
+              isLabelVisible: totalWhatsAppCartItems > 0,
               backgroundColor: Colors.orange,
               textColor: Colors.white,
-              child: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
+              child: const Icon(Icons.message, color: Colors.white),
             ),
-            onPressed: _showCartPreview,
-            tooltip: 'View Cart',
+            onPressed: _showWhatsAppCartPreview,
+            tooltip: 'View WhatsApp Cart',
           ),
           
-          // Clear cart button (only shown when cart has items)
-          if (_cartItems.isNotEmpty)
+          // Clear WhatsApp cart button (only shown when cart has items)
+          if (_whatsappCartItems.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.delete_sweep_outlined, color: Colors.white),
-              onPressed: _clearCart,
-              tooltip: 'Clear Cart',
+              onPressed: _clearWhatsAppCart,
+              tooltip: 'Clear WhatsApp Cart',
             ),
         ],
       ),
@@ -805,7 +919,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
           _isLoadingCart
               ? const Center(
                   child: CircularProgressIndicator(
-                    color: Color.fromARGB(255, 116, 190, 119),
+                    color: Colors.green,
                   ),
                 )
               : SingleChildScrollView(
@@ -823,10 +937,10 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                         ),
                         child: Column(
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.category,
                               size: 40,
-                              color: Color.fromARGB(255, 116, 190, 119),
+                              color: Colors.green[700],
                             ),
                             const SizedBox(height: 8),
                             Text(
@@ -839,12 +953,28 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                             ),
                             const SizedBox(height: 4),
                             const Text(
-                              'Browse all products in this category',
+                              'Add items to WhatsApp Cart and place order via WhatsApp',
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Colors.black54,
                               ),
                               textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.message, color: Colors.green, size: 16),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'WhatsApp Cart',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.green[700],
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -853,13 +983,13 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                       // Products Grid
                       _buildCategoryProductsGrid(),
                       
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 80), // Extra space for floating button
                     ],
                   ),
                 ),
           
-          // Floating Cart Button
-          _buildCartFloatingButton(),
+          // Floating WhatsApp Cart Button
+          _buildWhatsAppCartFloatingButton(),
         ],
       ),
     );
