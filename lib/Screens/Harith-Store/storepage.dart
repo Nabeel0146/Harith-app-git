@@ -1,4 +1,4 @@
-// lib/Screens/harith_store.dart
+// lib/Screens/harith_store.dart - Updated with integrated product card
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -432,244 +432,108 @@ class _HarithStorePageState extends State<HarithStorePage> {
     );
   }
 
-  Widget _buildProductGrid() {
-    if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
-    }
+  // ========================================
+  // HARITH STORE PRODUCT CARD WIDGET
+  // ========================================
+  Widget _buildHarithStoreProductCard(Map<String, dynamic> product) {
+    final double price = product['price'];
+    final double? offerPrice = product['offerPrice'];
+    final double? lastPrice = product['lastPrice'];
+    final double lastPriceQuantity = product['lastPriceQuantity'];
+    final double remainingLastPriceQuantity = product['remainingLastPriceQuantity'];
+    final double alreadyPurchased = product['alreadyPurchased'];
+    final bool isEligibleForLastPrice = product['isEligibleForLastPrice'];
+    final bool isInCart = product['isInCart'];
+    final int cartQuantity = product['cartQuantity'];
 
-    if (_filteredProducts.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.search_off,
-              size: 64,
-              color: Colors.grey,
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => HarithSingleProductPage(
+              product: {
+                ...product,
+                'id': product['id'],
+                'category': product['category'],
+                'discountedprice': product['price'],
+                'offerprice': product['offerPrice'],
+                'lastprice': product['lastPrice'],
+                'lastpricequantity': product['lastPriceQuantity'],
+                'image_url': product['image'],
+                'details': product['details'],
+                'stock': product['stock'] ?? -1,
+              },
+              initialCartItems: _cartItems,
+              onCartUpdate: (updatedCart) {
+                setState(() {
+                  _cartItems = updatedCart;
+                });
+                _saveCartToPrefs();
+                _fetchProducts();
+              },
             ),
-            const SizedBox(height: 16),
-            const Text(
-              'No products found',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-              ),
+          ),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200, width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
             ),
-            if (_searchQuery.isNotEmpty)
-              Text(
-                'Try a different search term',
-                style: TextStyle(color: Colors.grey[600]),
-              ),
           ],
         ),
-      );
-    }
-
-    return GridView.builder(
-      padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        childAspectRatio: 0.58,
-      ),
-      itemCount: _filteredProducts.length,
-      itemBuilder: (context, index) {
-        final product = _filteredProducts[index];
-        final double price = product['price'];
-        final double? offerPrice = product['offerPrice'];
-        final double? lastPrice = product['lastPrice'];
-        final double lastPriceQuantity = product['lastPriceQuantity'];
-        final double remainingLastPriceQuantity = product['remainingLastPriceQuantity'];
-        final double alreadyPurchased = product['alreadyPurchased'];
-        final bool isEligibleForLastPrice = product['isEligibleForLastPrice'];
-        final bool isInCart = product['isInCart'];
-        final int cartQuantity = product['cartQuantity'];
-
-        return GestureDetector(
-         onTap: () {
-  Navigator.of(context).push(
-    MaterialPageRoute(
-      builder: (_) => HarithSingleProductPage(
-        product: {
-          ...product,
-          'id': product['id'],
-          'category': product['category'],
-          'discountedprice': product['price'],
-          'offerprice': product['offerPrice'],
-          'lastprice': product['lastPrice'],
-          'lastpricequantity': product['lastPriceQuantity'],
-          'image_url': product['image'],
-          'details': product['details'],
-          'stock': product['stock'] ?? -1, // Add if available
-        },
-        initialCartItems: _cartItems,
-        onCartUpdate: (updatedCart) {
-          setState(() {
-            _cartItems = updatedCart;
-          });
-          _saveCartToPrefs();
-          _fetchProducts(); // Refresh product display
-        },
-      ),
-    ),
-  );
-},
-          child: Card(
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Stack(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Product Image with Member Badge
+            Stack(
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Product Image
-                    Container(
-                      height: 120,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(12),
-                          topRight: Radius.circular(12),
-                        ),
-                      ),
-                      child: product['image'] != null &&
-                              product['image'].isNotEmpty
-                          ? ClipRRect(
-                              borderRadius: const BorderRadius.only(
-                                topLeft: Radius.circular(12),
-                                topRight: Radius.circular(12),
+                // Product Image
+                Container(
+                  height: 120,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(12),
+                      topRight: Radius.circular(12),
+                    ),
+                  ),
+                  child: product['image'] != null && product['image'].isNotEmpty
+                      ? ClipRRect(
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(12),
+                            topRight: Radius.circular(12),
+                          ),
+                          child: CachedNetworkImage(
+                            imageUrl: product['image'],
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => Center(
+                              child: CircularProgressIndicator(
+                                color: Colors.green[400],
                               ),
-                              child: CachedNetworkImage(
-                                imageUrl: product['image'],
-                                fit: BoxFit.cover,
-                                placeholder: (context, url) => Center(
-                                  child: CircularProgressIndicator(
-                                    color: Colors.green[400],
-                                  ),
-                                ),
-                                errorWidget: (context, url, error) => Center(
-                                  child: Icon(
-                                    Icons.shopping_bag,
-                                    size: 40,
-                                    color: Colors.grey[400],
-                                  ),
-                                ),
-                              ),
-                            )
-                          : Center(
+                            ),
+                            errorWidget: (context, url, error) => Center(
                               child: Icon(
                                 Icons.shopping_bag,
                                 size: 40,
                                 color: Colors.grey[400],
                               ),
                             ),
-                    ),
-
-                    // Product Info
-                    Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Product Name
-                          Text(
-                            product['name'],
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-
-                          const SizedBox(height: 4),
-
-                          // Category
-                          Text(
-                            product['category'],
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-
-                          const SizedBox(height: 8),
-
-                          // Price - REMOVED STOCK INDICATOR FROM HERE
-                          _buildPriceDisplay(
-                            price: price,
-                            offerPrice: offerPrice,
-                            lastPrice: lastPrice,
-                            lastPriceQuantity: lastPriceQuantity,
-                            remainingLastPriceQuantity: remainingLastPriceQuantity,
-                            alreadyPurchased: alreadyPurchased,
-                            isEligibleForLastPrice: isEligibleForLastPrice,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-
-                // Cart button overlay
-                Positioned(
-                  bottom: 12,
-                  right: 12,
-                  child: isInCart
-                      ? Container(
-                          decoration: BoxDecoration(
-                            color: Colors.green,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.remove,
-                                    size: 18, color: Colors.white),
-                                onPressed: () {
-                                  _updateQuantity(
-                                      product['id'], cartQuantity - 1);
-                                },
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                              ),
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 8),
-                                child: Text(
-                                  '$cartQuantity',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.add,
-                                    size: 18, color: Colors.white),
-                                onPressed: () {
-                                  _updateQuantity(
-                                      product['id'], cartQuantity + 1);
-                                },
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                              ),
-                            ],
                           ),
                         )
-                      : FloatingActionButton.small(
-                          onPressed: () => _addToCart(product),
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                          child: const Icon(Icons.add_shopping_cart, size: 20),
+                      : Center(
+                          child: Icon(
+                            Icons.shopping_bag,
+                            size: 40,
+                            color: Colors.grey[400],
+                          ),
                         ),
                 ),
 
@@ -689,7 +553,7 @@ class _HarithStorePageState extends State<HarithStorePage> {
                       ),
                       child: Text(
                         isEligibleForLastPrice 
-                            ? 'MEMBER DEAL' 
+                            ? 'MEMBER' 
                             : 'QUOTA USED',
                         style: const TextStyle(
                           color: Colors.white,
@@ -699,12 +563,189 @@ class _HarithStorePageState extends State<HarithStorePage> {
                       ),
                     ),
                   ),
+
+                // Cart Badge (if item is in cart)
+                if (isInCart)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.green,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.check, size: 10, color: Colors.white),
+                          const SizedBox(width: 2),
+                          Text(
+                            '$cartQuantity',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
               ],
             ),
-          ),
-        );
-      },
+
+            // Product Details
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Product Name
+                        Text(
+                          product['name'],
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w500,
+                            fontSize: 14,
+                            height: 1.3,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+
+                        // Category
+                        Text(
+                          product['category'],
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+
+                        // Price Display
+                        _buildPriceDisplay(
+                          price: price,
+                          offerPrice: offerPrice,
+                          lastPrice: lastPrice,
+                          lastPriceQuantity: lastPriceQuantity,
+                          remainingLastPriceQuantity: remainingLastPriceQuantity,
+                          alreadyPurchased: alreadyPurchased,
+                          isEligibleForLastPrice: isEligibleForLastPrice,
+                        ),
+                      ],
+                    ),
+
+                    // Cart Button - Similar to ProductCard style
+                    _buildCartButton(
+                      isInCart: isInCart,
+                      cartQuantity: cartQuantity,
+                      onAddToCart: () => _addToCart(product),
+                      onIncreaseQuantity: () => _updateQuantity(product['id'], cartQuantity + 1),
+                      onDecreaseQuantity: () => _updateQuantity(product['id'], cartQuantity - 1),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
+  }
+
+  // Cart Button Builder - Similar to ProductCard style
+  Widget _buildCartButton({
+    required bool isInCart,
+    required int cartQuantity,
+    required VoidCallback onAddToCart,
+    required VoidCallback onIncreaseQuantity,
+    required VoidCallback onDecreaseQuantity,
+  }) {
+    if (isInCart && cartQuantity > 0) {
+      // Quantity Controls
+      return Container(
+        height: 32,
+        decoration: BoxDecoration(
+          color: Colors.green.shade50,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.green.shade200, width: 1),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // Decrease Button
+            IconButton(
+              onPressed: onDecreaseQuantity,
+              icon: Icon(
+                cartQuantity > 1 ? Icons.remove : Icons.delete_outline,
+                size: 16,
+                color: cartQuantity > 1 ? Colors.green : Colors.red,
+              ),
+              padding: const EdgeInsets.only(left: 8),
+              constraints: const BoxConstraints(),
+            ),
+            
+            // Quantity Display
+            Text(
+              '$cartQuantity',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.green,
+              ),
+            ),
+            
+            // Increase Button
+            IconButton(
+              onPressed: onIncreaseQuantity,
+              icon: const Icon(
+                Icons.add,
+                size: 16,
+                color: Colors.green,
+              ),
+              padding: const EdgeInsets.only(right: 8),
+              constraints: const BoxConstraints(),
+            ),
+          ],
+        ),
+      );
+    } else {
+      // Add to Cart Button
+      return SizedBox(
+        height: 32,
+        child: ElevatedButton.icon(
+          onPressed: onAddToCart,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color.fromARGB(255, 116, 190, 119),
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            elevation: 0,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+          ),
+          icon: const Icon(
+            Icons.add_shopping_cart,
+            size: 16,
+          ),
+          label: const Text(
+            'Add to Cart',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      );
+    }
   }
 
   Widget _buildPriceDisplay({
@@ -762,8 +803,8 @@ class _HarithStorePageState extends State<HarithStorePage> {
             ),
             child: Text(
               isEligibleForLastPrice
-                  ? '${remainingLastPriceQuantity.toStringAsFixed(2)}/${lastPriceQuantity.toStringAsFixed(2)} left this month'
-                  : 'Monthly quota: ${alreadyPurchased.toStringAsFixed(2)}/${lastPriceQuantity.toStringAsFixed(2)} used',
+                  ? '${remainingLastPriceQuantity.toStringAsFixed(2)}/${lastPriceQuantity.toStringAsFixed(2)} left'
+                  : 'Monthly quota used',
               style: TextStyle(
                 fontSize: 9,
                 color: isEligibleForLastPrice 
@@ -873,6 +914,57 @@ class _HarithStorePageState extends State<HarithStorePage> {
         ],
       );
     }
+  }
+
+  Widget _buildProductGrid() {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    if (_filteredProducts.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.search_off,
+              size: 64,
+              color: Colors.grey,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'No products found',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
+              ),
+            ),
+            if (_searchQuery.isNotEmpty)
+              Text(
+                'Try a different search term',
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+          ],
+        ),
+      );
+    }
+
+    return GridView.builder(
+      padding: const EdgeInsets.all(16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 0.56, // Adjusted for new card layout
+      ),
+      itemCount: _filteredProducts.length,
+      itemBuilder: (context, index) {
+        final product = _filteredProducts[index];
+        return _buildHarithStoreProductCard(product);
+      },
+    );
   }
 
   Widget _buildCategoryChips() {

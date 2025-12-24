@@ -224,7 +224,7 @@ class _AllProductsPageState extends State<AllProductsPage> {
             children: [
               Row(
                 children: [
-                  Icon(Icons.message, color: Colors.green, size: 24),
+                  Icon(Icons.shopping_bag, color: Colors.green, size: 24),
                   const SizedBox(width: 8),
                   const Text(
                     'WhatsApp Cart',
@@ -354,7 +354,7 @@ class _AllProductsPageState extends State<AllProductsPage> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green,
                       ),
-                      icon: const Icon(Icons.message, color: Colors.white),
+                      icon: const Icon(Icons.shopping_bag, color: Colors.white),
                       label: const Text('Go to Cart'),
                     ),
                   ),
@@ -534,7 +534,7 @@ class _AllProductsPageState extends State<AllProductsPage> {
           isLabelVisible: true,
           backgroundColor: Colors.orange,
           textColor: Colors.white,
-          child: const Icon(Icons.message),
+          child: const Icon(Icons.shopping_bag),
         ),
         label: Text(
           '₹${totalAmount.toStringAsFixed(2)}',
@@ -868,7 +868,7 @@ Widget _buildAllProductsGrid() {
               isLabelVisible: totalWhatsAppCartItems > 0,
               backgroundColor: Colors.orange,
               textColor: Colors.white,
-              child: const Icon(Icons.message, color: Colors.white),
+              child: const Icon(Icons.shopping_bag, color: Colors.white),
             ),
             onPressed: _showWhatsAppCartPreview,
             tooltip: 'View WhatsApp Cart',
