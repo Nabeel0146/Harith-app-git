@@ -1,42 +1,99 @@
 // lib/widgets/product_card.dart
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:harithapp/Services/whatsappcartservice.dart';
 import 'package:shimmer/shimmer.dart';
 
-class ProductCard extends StatelessWidget {
+
+class ProductCard extends StatefulWidget {
+  final String productId;
   final String name;
   final String imageUrl;
   final String discountedPrice;
   final String offerPrice;
   final VoidCallback? onTap;
   final bool isGridItem;
-  final bool isInCart;
-  final int cartQuantity;
-  final VoidCallback? onAddToCart;
-  final VoidCallback? onRemoveFromCart;
-  final VoidCallback? onIncreaseQuantity;
-  final VoidCallback? onDecreaseQuantity;
+  final String? category;
 
   const ProductCard({
     super.key,
+    required this.productId,
     required this.name,
     required this.imageUrl,
     required this.discountedPrice,
     required this.offerPrice,
     this.onTap,
     this.isGridItem = false,
-    this.isInCart = false,
-    this.cartQuantity = 0,
-    this.onAddToCart,
-    this.onRemoveFromCart,
-    this.onIncreaseQuantity,
-    this.onDecreaseQuantity,
+    this.category,
   });
+
+  @override
+  State<ProductCard> createState() => _ProductCardState();
+}
+
+class _ProductCardState extends State<ProductCard> {
+  final WhatsAppCartService _cartService = WhatsAppCartService();
+  bool _isInCart = false;
+  int _cartQuantity = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkCartStatus();
+    _cartService.addListener(_onCartUpdated);
+  }
+
+  @override
+  void dispose() {
+    _cartService.removeListener(_onCartUpdated);
+    super.dispose();
+  }
+
+  void _checkCartStatus() {
+    setState(() {
+      _isInCart = _cartService.isInCart(widget.productId);
+      _cartQuantity = _isInCart ? _cartService.getQuantity(widget.productId) : 0;
+    });
+  }
+
+  void _onCartUpdated(List<Map<String, dynamic>> cartItems) {
+    _checkCartStatus();
+  }
+
+  Future<void> _addToCart() async {
+    await _cartService.addToCart({
+      'id': widget.productId,
+      'name': widget.name,
+      'discountedprice': double.tryParse(widget.discountedPrice) ?? 0.0,
+      'offerprice': widget.offerPrice.isNotEmpty 
+          ? double.tryParse(widget.offerPrice)
+          : null,
+      'image_url': widget.imageUrl,
+      'category': widget.category ?? 'All Products',
+    });
+
+    // Show success message
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${widget.name} added to WhatsApp Cart'),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Future<void> _removeFromCart() async {
+    await _cartService.removeFromCart(widget.productId);
+  }
+
+  Future<void> _updateQuantity(int quantity) async {
+    await _cartService.updateQuantity(widget.productId, quantity);
+  }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: widget.onTap,
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -50,7 +107,7 @@ class ProductCard extends StatelessWidget {
             ),
           ],
         ),
-        child: isGridItem ? _buildGridItem() : _buildListItem(),
+        child: widget.isGridItem ? _buildGridItem() : _buildListItem(),
       ),
     );
   }
@@ -70,21 +127,9 @@ class ProductCard extends StatelessWidget {
               aspectRatio: 1.08,
               child: Stack(
                 children: [
-                  CachedNetworkImage(
-                    imageUrl: imageUrl,
-                    fit: BoxFit.cover,
-                    placeholder: (_, __) => Shimmer.fromColors(
-                      baseColor: Colors.grey[300]!,
-                      highlightColor: Colors.grey[100]!,
-                      child: Container(color: Colors.white),
-                    ),
-                    errorWidget: (_, __, ___) => Container(
-                      color: Colors.grey[300],
-                      child: const Icon(Icons.broken_image, color: Colors.grey),
-                    ),
-                  ),
+                  _buildProductImage(),
                   // In Cart badge
-                  if (isInCart)
+                  if (_isInCart)
                     Positioned(
                       top: 8,
                       left: 8,
@@ -103,7 +148,7 @@ class ProductCard extends StatelessWidget {
                             const Icon(Icons.check, size: 10, color: Colors.white),
                             const SizedBox(width: 2),
                             Text(
-                              '$cartQuantity',
+                              '$_cartQuantity',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 10,
@@ -130,7 +175,7 @@ class ProductCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        name,
+                        widget.name,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -143,7 +188,6 @@ class ProductCard extends StatelessWidget {
                       _buildPriceSection(),
                     ],
                   ),
-                  
                   // Cart Button - Full Width
                   _buildCartButton(),
                 ],
@@ -168,21 +212,9 @@ class ProductCard extends StatelessWidget {
             aspectRatio: 1,
             child: Stack(
               children: [
-                CachedNetworkImage(
-                  imageUrl: imageUrl,
-                  fit: BoxFit.cover,
-                  placeholder: (_, __) => Shimmer.fromColors(
-                    baseColor: Colors.grey[300]!,
-                    highlightColor: Colors.grey[100]!,
-                    child: Container(color: Colors.white),
-                  ),
-                  errorWidget: (_, __, ___) => Container(
-                    color: Colors.grey[300],
-                    child: const Icon(Icons.broken_image, color: Colors.grey),
-                  ),
-                ),
+                _buildProductImage(),
                 // In Cart badge
-                if (isInCart)
+                if (_isInCart)
                   Positioned(
                     top: 8,
                     left: 8,
@@ -201,7 +233,7 @@ class ProductCard extends StatelessWidget {
                           const Icon(Icons.check, size: 10, color: Colors.white),
                           const SizedBox(width: 2),
                           Text(
-                            '$cartQuantity',
+                            '$_cartQuantity',
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 10,
@@ -228,7 +260,7 @@ class ProductCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      name,
+                      widget.name,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -241,7 +273,6 @@ class ProductCard extends StatelessWidget {
                     _buildPriceSection(),
                   ],
                 ),
-                
                 // Cart Button - Full Width
                 _buildCartButton(),
               ],
@@ -252,15 +283,32 @@ class ProductCard extends StatelessWidget {
     );
   }
 
+  Widget _buildProductImage() {
+    return CachedNetworkImage(
+      imageUrl: widget.imageUrl,
+      fit: BoxFit.cover,
+      placeholder: (_, __) => Shimmer.fromColors(
+        baseColor: Colors.grey[300]!,
+        highlightColor: Colors.grey[100]!,
+        child: Container(color: Colors.white),
+      ),
+      errorWidget: (_, __, ___) => Container(
+        color: Colors.grey[300],
+        child: const Icon(Icons.broken_image, color: Colors.grey),
+      ),
+    );
+  }
+
   Widget _buildPriceSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (discountedPrice.isNotEmpty && discountedPrice != offerPrice)
+        if (widget.discountedPrice.isNotEmpty && 
+            widget.discountedPrice != widget.offerPrice)
           Row(
             children: [
               Text(
-                '₹$discountedPrice',
+                '₹${widget.discountedPrice}',
                 style: const TextStyle(
                   fontSize: 12,
                   color: Colors.grey,
@@ -275,7 +323,7 @@ class ProductCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  '${((1 - double.parse(offerPrice) / double.parse(discountedPrice)) * 100).toStringAsFixed(0)}% OFF',
+                  '${((1 - double.parse(widget.offerPrice) / double.parse(widget.discountedPrice)) * 100).toStringAsFixed(0)}% OFF',
                   style: TextStyle(
                     fontSize: 10,
                     color: Colors.red.shade700,
@@ -286,7 +334,7 @@ class ProductCard extends StatelessWidget {
             ],
           ),
         Text(
-          '₹$offerPrice',
+          '₹${widget.offerPrice}',
           style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -298,7 +346,7 @@ class ProductCard extends StatelessWidget {
   }
 
   Widget _buildCartButton() {
-    if (isInCart && cartQuantity > 0) {
+    if (_isInCart && _cartQuantity > 0) {
       // Quantity Controls
       return Container(
         height: 32,
@@ -312,11 +360,11 @@ class ProductCard extends StatelessWidget {
           children: [
             // Decrease Button
             IconButton(
-              onPressed: onDecreaseQuantity,
+              onPressed: () => _updateQuantity(_cartQuantity - 1),
               icon: Icon(
-                cartQuantity > 1 ? Icons.remove : Icons.delete_outline,
+                _cartQuantity > 1 ? Icons.remove : Icons.delete_outline,
                 size: 16,
-                color: cartQuantity > 1 ? Colors.green : Colors.red,
+                color: _cartQuantity > 1 ? Colors.green : Colors.red,
               ),
               padding: const EdgeInsets.only(left: 8),
               constraints: const BoxConstraints(),
@@ -324,7 +372,7 @@ class ProductCard extends StatelessWidget {
             
             // Quantity Display
             Text(
-              '$cartQuantity',
+              '$_cartQuantity',
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
@@ -334,7 +382,7 @@ class ProductCard extends StatelessWidget {
             
             // Increase Button
             IconButton(
-              onPressed: onIncreaseQuantity,
+              onPressed: () => _updateQuantity(_cartQuantity + 1),
               icon: const Icon(
                 Icons.add,
                 size: 16,
@@ -351,7 +399,7 @@ class ProductCard extends StatelessWidget {
       return SizedBox(
         height: 32,
         child: ElevatedButton.icon(
-          onPressed: onAddToCart,
+          onPressed: _addToCart,
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.green,
             foregroundColor: Colors.white,

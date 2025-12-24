@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
 
 import 'package:harithapp/Screens/harithsingleproduct.dart';
+import 'package:harithapp/widgets/productcard.dart'; // ADD THIS IMPORT
 
 
 class CategoryProductsPage extends StatefulWidget {
@@ -105,7 +106,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
     );
   }
 
-  // Add item to WhatsApp cart
+  // Add item to WhatsApp cart - UPDATED to use ProductCard's cart service
   void _addToWhatsAppCart(Map<String, dynamic> product) {
     final String productId = product['id'];
     final int existingIndex =
@@ -567,7 +568,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
             ),
           ],
         ),
-      ),
+      )
     );
   }
 
@@ -660,206 +661,54 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                   crossAxisCount: 2,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
-                  childAspectRatio: 0.65,
+                  childAspectRatio: 0.56,
                 ),
                 itemCount: filteredProducts.length,
                 itemBuilder: (context, index) {
                   final doc = filteredProducts[index];
-                  final p = doc.data() as Map<String, dynamic>;
+                  final product = doc.data() as Map<String, dynamic>;
                   final productId = doc.id;
-                  final bool isInWhatsAppCart = _isProductInWhatsAppCart(productId);
-                  final int cartQuantity = isInWhatsAppCart ? _getWhatsAppCartQuantity(productId) : 0;
-                  
+
                   // Safely parse prices
-                  final double discountedPrice = _parseToDouble(p['discountedprice']);
-                  final double? offerPrice = p['offerprice'] != null 
-                      ? _parseToDouble(p['offerprice'])
+                  final double discountedPrice = _parseToDouble(product['discountedprice']);
+                  final double? offerPrice = product['offerprice'] != null 
+                      ? _parseToDouble(product['offerprice'])
                       : null;
                   
-                  return Card(
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Stack(
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Product Image
-                            GestureDetector(
-                              onTap: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => SingleProductPage(
-                                      product: {
-                                        ...p,
-                                        'id': productId,
-                                      },
-                                    ),
-                                  ),
-                                );
-                              },
-                              child: Container(
-                                height: 120,
-                                width: double.infinity,
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[100],
-                                  borderRadius: const BorderRadius.only(
-                                    topLeft: Radius.circular(12),
-                                    topRight: Radius.circular(12),
-                                  ),
-                                ),
-                                child: p['image_url']?.isNotEmpty == true
-                                    ? ClipRRect(
-                                        borderRadius: const BorderRadius.only(
-                                          topLeft: Radius.circular(12),
-                                          topRight: Radius.circular(12),
-                                        ),
-                                        child: CachedNetworkImage(
-                                          imageUrl: p['image_url']!,
-                                          fit: BoxFit.cover,
-                                          placeholder: (_, __) => Center(
-                                            child: CircularProgressIndicator(
-                                              color: Colors.green,
-                                            ),
-                                          ),
-                                          errorWidget: (_, __, ___) => Center(
-                                            child: Icon(
-                                              Icons.shopping_bag,
-                                              size: 40,
-                                              color: Colors.grey[400],
-                                            ),
-                                          ),
-                                        ),
-                                      )
-                                    : Center(
-                                        child: Icon(
-                                          Icons.shopping_bag,
-                                          size: 40,
-                                          color: Colors.grey[400],
-                                        ),
-                                      ),
-                              ),
-                            ),
+                  final String discountedPriceStr;
+                  final String offerPriceStr;
+                  
+                  if (offerPrice != null && offerPrice < discountedPrice) {
+                    discountedPriceStr = discountedPrice.toStringAsFixed(2);
+                    offerPriceStr = offerPrice.toStringAsFixed(2);
+                  } else {
+                    discountedPriceStr = '';
+                    offerPriceStr = discountedPrice.toStringAsFixed(2);
+                  }
 
-                            // Product Info
-                            Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Product Name
-                                  GestureDetector(
-                                    onTap: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (_) => SingleProductPage(
-                                            product: {
-                                              ...p,
-                                              'id': productId,
-                                            },
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                    child: Text(
-                                      p['name']?.toString() ?? 'Product Name',
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-
-                                  const SizedBox(height: 4),
-
-                                  // Price
-                                  Text(
-                                    '₹${discountedPrice.toStringAsFixed(2)}',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.green,
-                                    ),
-                                  ),
-
-                                  // Offer price
-                                  if (offerPrice != null && offerPrice > 0)
-                                    Text(
-                                      'Offer: ₹${offerPrice.toStringAsFixed(2)}',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.blue,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ],
+                  // Note: Since ProductCard now handles cart internally,
+                  // we don't need to pass cart callbacks.
+                  // The cart state will be managed by the WhatsAppCartService
+                  return ProductCard(
+                    productId: productId,
+                    name: product['name']?.toString() ?? 'Product Name',
+                    imageUrl: product['image_url']?.toString() ?? '',
+                    discountedPrice: discountedPriceStr,
+                    offerPrice: offerPriceStr,
+                    category: widget.categoryName, // Use the page's category
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => SingleProductPage(
+                            product: {
+                              ...product,
+                              'id': productId,
+                            },
+                          ),
                         ),
-
-                        // WhatsApp Cart button overlay
-                        Positioned(
-                          bottom: 12,
-                          right: 12,
-                          child: isInWhatsAppCart
-                              ? Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.green,
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.remove,
-                                            size: 18, color: Colors.white),
-                                        onPressed: () {
-                                          _updateWhatsAppCartQuantity(productId, cartQuantity - 1);
-                                        },
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(),
-                                      ),
-                                      Padding(
-                                        padding:
-                                            const EdgeInsets.symmetric(horizontal: 8),
-                                        child: Text(
-                                          '$cartQuantity',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.add,
-                                            size: 18, color: Colors.white),
-                                        onPressed: () {
-                                          _updateWhatsAppCartQuantity(productId, cartQuantity + 1);
-                                        },
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(),
-                                      ),
-                                    ],
-                                  ),
-                                )
-                              : FloatingActionButton.small(
-                                  onPressed: () => _addToWhatsAppCart({
-                                    ...p,
-                                    'id': productId,
-                                  }),
-                                  backgroundColor: Colors.green,
-                                  foregroundColor: Colors.white,
-                                  child: const Icon(Icons.add_shopping_cart, size: 20),
-                                ),
-                        ),
-                      ],
-                    ),
+                      );
+                    },
+                    isGridItem: true,
                   );
                 },
               ),

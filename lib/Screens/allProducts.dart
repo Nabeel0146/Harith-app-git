@@ -779,74 +779,53 @@ Widget _buildAllProductsGrid() {
             const SizedBox(height: 16),
             
             // Using LayoutBuilder for responsive design
-            LayoutBuilder(
-              builder: (context, constraints) {
-                // Calculate responsive height based on screen width
-                final cardWidth = (constraints.maxWidth - 12) / 2;
-                final cardHeight = cardWidth * 1.8; // Responsive height
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 0.60,
+              ),
+              itemCount: items.length,
+              itemBuilder: (_, idx) {
+                final doc = items[idx];
+                final product = doc.data() as Map<String, dynamic>;
+                final productId = doc.id;
                 
-                return GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: cardWidth / cardHeight,
-                  ),
-                  itemCount: items.length,
-                  itemBuilder: (_, idx) {
-                    final doc = items[idx];
-                    final product = doc.data() as Map<String, dynamic>;
-                    final productId = doc.id;
-                    final bool isInWhatsAppCart = _isProductInWhatsAppCart(productId);
-                    final int cartQuantity = isInWhatsAppCart ? _getWhatsAppCartQuantity(productId) : 0;
-                    
-                    final double discountedPrice = _parseToDouble(product['discountedprice']);
-                    final double? offerPrice = product['offerprice'] != null 
-                        ? _parseToDouble(product['offerprice'])
-                        : null;
-                    
-                    final String discountedPriceStr;
-                    final String offerPriceStr;
-                    
-                    if (offerPrice != null && offerPrice < discountedPrice) {
-                      discountedPriceStr = discountedPrice.toStringAsFixed(2);
-                      offerPriceStr = offerPrice.toStringAsFixed(2);
-                    } else {
-                      discountedPriceStr = '';
-                      offerPriceStr = discountedPrice.toStringAsFixed(2);
-                    }
+                final double discountedPrice = _parseToDouble(product['discountedprice']);
+                final double? offerPrice = product['offerprice'] != null 
+                    ? _parseToDouble(product['offerprice'])
+                    : null;
+                
+                final String discountedPriceStr;
+                final String offerPriceStr;
+                
+                if (offerPrice != null && offerPrice < discountedPrice) {
+                  discountedPriceStr = discountedPrice.toStringAsFixed(2);
+                  offerPriceStr = offerPrice.toStringAsFixed(2);
+                } else {
+                  discountedPriceStr = '';
+                  offerPriceStr = discountedPrice.toStringAsFixed(2);
+                }
 
-                    return SizedBox(
-                      height: cardHeight,
-                      child: ProductCard(
-                        name: product['name']?.toString() ?? 'Product Name',
-                        imageUrl: product['image_url']?.toString() ?? '',
-                        discountedPrice: discountedPriceStr,
-                        offerPrice: offerPriceStr,
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => SingleProductPage(
-                                product: {
-                                  ...product,
-                                  'id': productId,
-                                },
-                              ),
-                            ),
-                          );
-                        },
-                        isGridItem: true,
-                        isInCart: isInWhatsAppCart,
-                        cartQuantity: cartQuantity,
-                        onAddToCart: () => _addToWhatsAppCart({
-                          ...product,
-                          'id': productId,
-                        }),
-                        onIncreaseQuantity: () => _updateWhatsAppCartQuantity(productId, cartQuantity + 1),
-                        onDecreaseQuantity: () => _updateWhatsAppCartQuantity(productId, cartQuantity - 1),
-                        onRemoveFromCart: () => _removeFromWhatsAppCart(productId),
+                return ProductCard(
+                  productId: productId,
+                  name: product['name']?.toString() ?? 'Product Name',
+                  imageUrl: product['image_url']?.toString() ?? '',
+                  discountedPrice: discountedPriceStr,
+                  offerPrice: offerPriceStr,
+                  category: product['category']?.toString(),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => SingleProductPage(
+                          product: {
+                            ...product,
+                            'id': productId,
+                          },
+                        ),
                       ),
                     );
                   },

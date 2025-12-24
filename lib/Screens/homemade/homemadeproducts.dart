@@ -102,33 +102,140 @@ class HomemadeProductsPage extends StatelessWidget {
                 final product = doc.data() as Map<String, dynamic>;
                 final productId = doc.id;
 
+                // Helper method to parse double values safely
+                double parseToDouble(dynamic value) {
+                  if (value == null) return 0.0;
+                  if (value is double) return value;
+                  if (value is int) return value.toDouble();
+                  if (value is String) return double.tryParse(value) ?? 0.0;
+                  return 0.0;
+                }
+
                 // Handle pricing logic
                 final originalPrice = product['price']?.toString() ?? '';
                 final discountedPrice = product['discountedprice']?.toString() ?? '';
                 
-                // If discounted price exists, show both prices
-                // Otherwise just show the original price
-                final displayPrice = discountedPrice.isNotEmpty ? discountedPrice : originalPrice;
-                final offerPrice = discountedPrice.isNotEmpty ? originalPrice : '';
+                // Parse prices to double for comparison
+                final originalPriceNum = parseToDouble(product['price']);
+                final discountedPriceNum = parseToDouble(product['discountedprice']);
+                
+                String discountedPriceStr;
+                String offerPriceStr;
+                
+                if (discountedPriceNum > 0 && discountedPriceNum < originalPriceNum) {
+                  // Show discounted price scenario
+                  discountedPriceStr = originalPriceNum.toStringAsFixed(2);
+                  offerPriceStr = discountedPriceNum.toStringAsFixed(2);
+                } else {
+                  // Show regular price scenario
+                  discountedPriceStr = '';
+                  offerPriceStr = originalPriceNum.toStringAsFixed(2);
+                }
 
-                return ProductCard(
-                  name: product['name'] ?? 'Product Name',
-                  imageUrl: product['imageUrl'] ?? '',
-                  discountedPrice: offerPrice,
-                  offerPrice: displayPrice,
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => HomemadeSingleProductPage(
-                          product: {
-                            ...product,
-                            'id': productId,
-                          },
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade200, width: 1),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Image - Square aspect ratio
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => HomemadeSingleProductPage(
+                                product: {
+                                  ...product,
+                                  'id': productId,
+                                },
+                              ),
+                            ),
+                          );
+                        },
+                        child: ClipRRect(
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(12),
+                          ),
+                          child: AspectRatio(
+                            aspectRatio: 1,
+                            child: Image.network(
+                              product['imageUrl']?.toString() ?? '',
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                color: Colors.grey[300],
+                                child: const Icon(Icons.broken_image, color: Colors.grey),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                    );
-                  },
-                  isGridItem: true,
+                      
+                      // Product Details
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    product['name']?.toString() ?? 'Product Name',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 14,
+                                      height: 1.3,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  // Price Section
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      if (discountedPriceStr.isNotEmpty)
+                                        Text(
+                                          '₹$discountedPriceStr',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey,
+                                            decoration: TextDecoration.lineThrough,
+                                          ),
+                                        ),
+                                      Text(
+                                        '₹$offerPriceStr',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.green,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              
+                              // View Details Button
+                             
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 );
               },
             ),

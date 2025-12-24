@@ -80,21 +80,48 @@ class ProductsPage extends StatelessWidget {
       itemBuilder: (_, idx) {
         final doc = products[idx];
         final product = doc.data() as Map<String, dynamic>;
+        final productId = doc.id;
         
-        // Add document ID to the product map for SingleProductPage if needed
-        final productWithId = {
-          ...product,
-          'id': doc.id, // Include the document ID
-        };
+        // Helper method to parse double values safely
+        double parseToDouble(dynamic value) {
+          if (value == null) return 0.0;
+          if (value is double) return value;
+          if (value is int) return value.toDouble();
+          if (value is String) return double.tryParse(value) ?? 0.0;
+          return 0.0;
+        }
+        
+        // Calculate price strings
+        final double discountedPrice = parseToDouble(product['discountedprice']);
+        final double? offerPrice = product['offerprice'] != null 
+            ? parseToDouble(product['offerprice'])
+            : null;
+        
+        final String discountedPriceStr;
+        final String offerPriceStr;
+        
+        if (offerPrice != null && offerPrice < discountedPrice) {
+          discountedPriceStr = discountedPrice.toStringAsFixed(2);
+          offerPriceStr = offerPrice.toStringAsFixed(2);
+        } else {
+          discountedPriceStr = '';
+          offerPriceStr = discountedPrice.toStringAsFixed(2);
+        }
 
         return ProductCard(
-          name: product['name'] ?? 'Product Name',
-          imageUrl: product['image_url'] ?? '',
-          discountedPrice: product['discountedprice']?.toString() ?? '',
-          offerPrice: product['offerprice']?.toString() ?? 
-                     product['discountedprice']?.toString() ?? '',
+          productId: productId, // ADDED: Required parameter
+          name: product['name']?.toString() ?? 'Product Name',
+          imageUrl: product['image_url']?.toString() ?? '',
+          discountedPrice: discountedPriceStr,
+          offerPrice: offerPriceStr,
+          category: categoryName, // Use the page's category name
           onTap: () {
-            // Pass the complete product map to SingleProductPage
+            // Add document ID to the product map for SingleProductPage
+            final productWithId = {
+              ...product,
+              'id': productId,
+            };
+            
             Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (_) => SingleProductPage(product: productWithId),

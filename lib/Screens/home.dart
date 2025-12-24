@@ -892,61 +892,91 @@ class _HomePageState extends State<HomePage> {
   /* ---------- Promo Banner ---------- */
   Widget _buildPromoBanner() => const SizedBox.shrink(); // Placeholder for now
 
-  /* ---------- Featured Products ---------- */
-  /* ---------- Featured Products ---------- */
-  Widget _buildProducts() {
-    return FutureBuilder<QuerySnapshot>(
-      future: FirebaseFirestore.instance
-          .collection('harith-products')
-          .where('display', isEqualTo: true)
-          .where('featured', isEqualTo: true) // Add this condition
-          .get(),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          print('Products Error: ${snapshot.error}');
-          return _buildSectionError('Failed to load featured products');
-        }
+  /* ---------- Parse to Double Helper ---------- */
+  double _parseToDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) {
+      return double.tryParse(value) ?? 0.0;
+    }
+    return 0.0;
+  }
 
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return _buildProductsShimmer();
-        }
+ /* ---------- Featured Products ---------- */
+/* ---------- Featured Products ---------- */
+Widget _buildProducts() {
+  return FutureBuilder<QuerySnapshot>(
+    future: FirebaseFirestore.instance
+        .collection('harith-products')
+        .where('display', isEqualTo: true)
+        .where('featured', isEqualTo: true)
+        .get(),
+    builder: (context, snapshot) {
+      if (snapshot.hasError) {
+        print('Products Error: ${snapshot.error}');
+        return _buildSectionError('Failed to load featured products');
+      }
 
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const SizedBox
-              .shrink(); // Hide section if no featured products
-        }
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return _buildProductsShimmer();
+      }
 
-        final items = snapshot.data!.docs;
+      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+        return const SizedBox
+            .shrink(); // Hide section if no featured products
+      }
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text(
-                'Featured Products',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
+      final items = snapshot.data!.docs;
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Text(
+              'Featured Products',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            SizedBox(
-              height: 240,
-              child: ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                scrollDirection: Axis.horizontal,
-                itemCount: items.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 12),
-                itemBuilder: (_, idx) {
-                  final doc = items[idx];
-                  final p = doc.data() as Map<String, dynamic>;
-                  final productId = doc.id;
+          ),
+          SizedBox(
+            height: 280, // INCREASED from 240 to 280 (or try 300 if needed)
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              scrollDirection: Axis.horizontal,
+              itemCount: items.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (_, idx) {
+                final doc = items[idx];
+                final p = doc.data() as Map<String, dynamic>;
+                final productId = doc.id;
 
-                  return ProductCard(
-                    name: p['name'] ?? 'Product Name',
-                    imageUrl: p['image_url'] ?? '',
-                    discountedPrice: p['discountedprice']?.toString() ?? '',
-                    offerPrice: p['offerprice']?.toString() ??
-                        p['discountedprice']?.toString() ??
-                        '',
+                // Calculate price strings
+                final double discountedPrice = _parseToDouble(p['discountedprice']);
+                final double? offerPrice = p['offerprice'] != null 
+                    ? _parseToDouble(p['offerprice'])
+                    : null;
+                
+                final String discountedPriceStr;
+                final String offerPriceStr;
+                
+                if (offerPrice != null && offerPrice < discountedPrice) {
+                  discountedPriceStr = discountedPrice.toStringAsFixed(2);
+                  offerPriceStr = offerPrice.toStringAsFixed(2);
+                } else {
+                  discountedPriceStr = '';
+                  offerPriceStr = discountedPrice.toStringAsFixed(2);
+                }
+
+                return SizedBox(
+                  width: 160, // Fixed width for horizontal list items
+                  child: ProductCard(
+                    productId: productId,
+                    name: p['name']?.toString() ?? 'Product Name',
+                    imageUrl: p['image_url']?.toString() ?? '',
+                    discountedPrice: discountedPriceStr,
+                    offerPrice: offerPriceStr,
+                    category: p['category']?.toString(),
                     onTap: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
@@ -960,53 +990,57 @@ class _HomePageState extends State<HomePage> {
                       );
                     },
                     isGridItem: false,
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             ),
-            const SizedBox(height: 20)
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildProductsShimmer() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Text(
-            'Featured Products',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
+          const SizedBox(height: 20)
+        ],
+      );
+    },
+  );
+}
+
+Widget _buildProductsShimmer() {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Text(
+          'Featured Products',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
-        SizedBox(
-          height: 220,
-          child: ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            scrollDirection: Axis.horizontal,
-            itemCount: 4,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (_, idx) {
-              return Shimmer.fromColors(
+      ),
+      SizedBox(
+        height: 280, // INCREASED to match the actual height
+        child: ListView.separated(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          scrollDirection: Axis.horizontal,
+          itemCount: 4,
+          separatorBuilder: (_, __) => const SizedBox(width: 12),
+          itemBuilder: (_, idx) {
+            return SizedBox(
+              width: 160,
+              child: Shimmer.fromColors(
                 baseColor: Colors.grey[300]!,
                 highlightColor: Colors.grey[100]!,
                 child: Container(
-                  width: 160,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-              );
-            },
-          ),
+              ),
+            );
+          },
         ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
+}
+
 
   Widget _buildSectionError(String message) {
     return Padding(
@@ -1020,93 +1054,110 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /* ---------- All Products Grid ---------- */
-  Widget _buildAllProductsGrid() {
-    return FutureBuilder<QuerySnapshot>(
-      future: FirebaseFirestore.instance
-          .collection('harith-products')
-          .where('display', isEqualTo: true)
-          .get(),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          print('All Products Error: ${snapshot.error}');
-          return _buildSectionError('Failed to load all products');
-        }
+ /* ---------- All Products Grid ---------- */
+Widget _buildAllProductsGrid() {
+  return FutureBuilder<QuerySnapshot>(
+    future: FirebaseFirestore.instance
+        .collection('harith-products')
+        .where('display', isEqualTo: true)
+        .get(),
+    builder: (context, snapshot) {
+      if (snapshot.hasError) {
+        print('All Products Error: ${snapshot.error}');
+        return _buildSectionError('Failed to load all products');
+      }
 
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return const Center(child: CircularProgressIndicator());
+      }
 
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Center(
-              child: Text(
-                'No products available',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
+      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+        return const Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Center(
+            child: Text(
+              'No products available',
+              style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
-          );
-        }
-
-        final items = snapshot.data!.docs;
-
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Padding(
-                padding: EdgeInsets.only(top: 12, bottom: 8),
-                child: Text(
-                  'All Products',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-              ),
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 8,
-                  childAspectRatio: 0.68,
-                ),
-                itemCount: items.length,
-                itemBuilder: (_, idx) {
-                  final doc = items[idx];
-                  final p = doc.data() as Map<String, dynamic>;
-                  final productId = doc.id;
-
-                  return ProductCard(
-                    name: p['name'] ?? 'Product Name',
-                    imageUrl: p['image_url'] ?? '',
-                    discountedPrice: p['discountedprice']?.toString() ?? '',
-                    offerPrice: p['offerprice']?.toString() ??
-                        p['discountedprice']?.toString() ??
-                        '',
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => SingleProductPage(
-                            product: {
-                              ...p,
-                              'id': productId,
-                            },
-                          ),
-                        ),
-                      );
-                    },
-                    isGridItem: true,
-                  );
-                },
-              ),
-            ],
           ),
         );
-      },
-    );
-  }
+      }
+
+      final items = snapshot.data!.docs;
+
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(top: 12, bottom: 8),
+              child: Text(
+                'All Products',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+                childAspectRatio: 0.54,
+              ),
+              itemCount: items.length,
+              itemBuilder: (_, idx) {
+                final doc = items[idx];
+                final p = doc.data() as Map<String, dynamic>;
+                final productId = doc.id;
+
+                // Calculate price strings
+                final double discountedPrice = _parseToDouble(p['discountedprice']);
+                final double? offerPrice = p['offerprice'] != null 
+                    ? _parseToDouble(p['offerprice'])
+                    : null;
+                
+                final String discountedPriceStr;
+                final String offerPriceStr;
+                
+                if (offerPrice != null && offerPrice < discountedPrice) {
+                  discountedPriceStr = discountedPrice.toStringAsFixed(2);
+                  offerPriceStr = offerPrice.toStringAsFixed(2);
+                } else {
+                  discountedPriceStr = '';
+                  offerPriceStr = discountedPrice.toStringAsFixed(2);
+                }
+
+                return ProductCard(
+                  productId: productId, // ADDED: Required parameter
+                  name: p['name']?.toString() ?? 'Product Name',
+                  imageUrl: p['image_url']?.toString() ?? '',
+                  discountedPrice: discountedPriceStr,
+                  offerPrice: offerPriceStr,
+                  category: p['category']?.toString(), // Optional but recommended
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => SingleProductPage(
+                          product: {
+                            ...p,
+                            'id': productId,
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                  isGridItem: true,
+                );
+              },
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
 
   /* ---------- Sponsored Ads ---------- */
   Widget _buildSponsoredAds() {
