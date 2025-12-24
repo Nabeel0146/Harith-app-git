@@ -37,12 +37,17 @@ class _HarithCartPageState extends State<HarithCartPage> {
   double _offerTotal = 0.0;
   double _regularTotal = 0.0;
   double _totalSavings = 0.0;
-  double _totalOriginalValue = 0.0; // Total of discountedprice (original)
+  double _totalOriginalValue = 0.0;
   
   // Item counts
   int _memberItemsCount = 0;
   int _offerItemsCount = 0;
   int _regularItemsCount = 0;
+
+  // Track items by price tier for better display
+  List<Map<String, dynamic>> _memberPriceItems = [];
+  List<Map<String, dynamic>> _offerPriceItems = [];
+  List<Map<String, dynamic>> _regularPriceItems = [];
   
   @override
   void initState() {
@@ -79,6 +84,54 @@ class _HarithCartPageState extends State<HarithCartPage> {
     }
   }
 
+  void _categorizeItems() {
+    _memberPriceItems.clear();
+    _offerPriceItems.clear();
+    _regularPriceItems.clear();
+    
+    for (var item in _cartItems) {
+      final double discountedPrice = item['price'] ?? 0.0;
+      final double? offerPrice = item['offerPrice'];
+      final double? lastPrice = item['lastPrice'];
+      final double lastPriceQuantity = item['lastPriceQuantity'] ?? 0.0;
+      final double remainingLastPriceQuantity = item['remainingLastPriceQuantity'] ?? 0.0;
+      final bool isEligibleForLastPrice = item['isEligibleForLastPrice'] ?? false;
+      final int quantity = item['quantity'] is int ? item['quantity'] as int : 0;
+      
+      // Create item copy with additional info
+      final itemWithInfo = Map<String, dynamic>.from(item);
+      
+      if (_hasMembership && 
+          lastPrice != null && 
+          lastPrice > 0 && 
+          isEligibleForLastPrice) {
+        // Member price applies
+        itemWithInfo['appliedPrice'] = lastPrice;
+        itemWithInfo['priceType'] = 'member';
+        itemWithInfo['priceTypeLabel'] = 'Member Price';
+        itemWithInfo['priceColor'] = Colors.orange;
+        itemWithInfo['remainingAtMemberPrice'] = remainingLastPriceQuantity.floor();
+        itemWithInfo['atMemberPriceCount'] = quantity.clamp(0, remainingLastPriceQuantity.floor());
+        itemWithInfo['atOtherPriceCount'] = quantity - itemWithInfo['atMemberPriceCount'];
+        _memberPriceItems.add(itemWithInfo);
+      } else if (offerPrice != null && offerPrice > 0) {
+        // Offer price applies
+        itemWithInfo['appliedPrice'] = offerPrice;
+        itemWithInfo['priceType'] = 'offer';
+        itemWithInfo['priceTypeLabel'] = 'Offer Price';
+        itemWithInfo['priceColor'] = Colors.blue;
+        _offerPriceItems.add(itemWithInfo);
+      } else {
+        // Regular price applies
+        itemWithInfo['appliedPrice'] = discountedPrice;
+        itemWithInfo['priceType'] = 'regular';
+        itemWithInfo['priceTypeLabel'] = 'Regular Price';
+        itemWithInfo['priceColor'] = Colors.green;
+        _regularPriceItems.add(itemWithInfo);
+      }
+    }
+  }
+
   void _calculateTotals() {
     _subTotal = 0.0;
     _memberTotal = 0.0;
@@ -91,41 +144,66 @@ class _HarithCartPageState extends State<HarithCartPage> {
     _offerItemsCount = 0;
     _regularItemsCount = 0;
     
-    for (var item in _cartItems) {
-      final double discountedPrice = item['price'] ?? 0.0; // This is the discountedprice from product
-      final double? offerPrice = item['offerPrice']; // offerprice from product
-      final double? lastPrice = item['lastPrice']; // lastprice from product
+    _categorizeItems();
+    
+    // Calculate for member price items
+    for (var item in _memberPriceItems) {
+      final double discountedPrice = item['price'] ?? 0.0;
+      final double appliedPrice = item['appliedPrice'] ?? 0.0;
       final int quantity = item['quantity'] is int ? item['quantity'] as int : 0;
+      final int atMemberPriceCount = item['atMemberPriceCount'] ?? quantity;
+      final int atOtherPriceCount = item['atOtherPriceCount'] ?? 0;
+      final double? offerPrice = item['offerPrice'];
       
-      // Track original value (based on discountedprice)
-      _totalOriginalValue += (discountedPrice * quantity);
+      // Calculate member price portion
+      final double memberPricePortion = (appliedPrice * atMemberPriceCount);
+      _memberTotal += memberPricePortion;
+      _memberItemsCount += atMemberPriceCount;
+      _totalSavings += (discountedPrice - appliedPrice) * atMemberPriceCount;
       
-      double finalPrice;
-      
-      // Determine which price applies
-      if (_hasMembership && 
-          lastPrice != null && 
-          lastPrice > 0 && 
-          item['isEligibleForLastPrice'] == true) {
-        // Member price applies
-        finalPrice = lastPrice;
-        _memberTotal += (lastPrice * quantity);
-        _memberItemsCount += quantity;
-        _totalSavings += (discountedPrice - lastPrice) * quantity;
-      } else if (offerPrice != null && offerPrice > 0) {
-        // Offer price applies
-        finalPrice = offerPrice;
-        _offerTotal += (offerPrice * quantity);
-        _offerItemsCount += quantity;
-        _totalSavings += (discountedPrice - offerPrice) * quantity;
-      } else {
-        // Regular price applies (discountedprice)
-        finalPrice = discountedPrice;
-        _regularTotal += (discountedPrice * quantity);
-        _regularItemsCount += quantity;
+      // Calculate other price portion (offer price if available, else regular)
+      if (atOtherPriceCount > 0) {
+        if (offerPrice != null && offerPrice > 0) {
+          final double offerPricePortion = (offerPrice * atOtherPriceCount);
+          _offerTotal += offerPricePortion;
+          _offerItemsCount += atOtherPriceCount;
+          _totalSavings += (discountedPrice - offerPrice) * atOtherPriceCount;
+        } else {
+          final double regularPricePortion = (discountedPrice * atOtherPriceCount);
+          _regularTotal += regularPricePortion;
+          _regularItemsCount += atOtherPriceCount;
+        }
       }
       
-      _subTotal += (finalPrice * quantity);
+      _subTotal += memberPricePortion + 
+          (atOtherPriceCount > 0 ? (offerPrice != null && offerPrice > 0 
+              ? (offerPrice * atOtherPriceCount) 
+              : (discountedPrice * atOtherPriceCount)) : 0);
+      _totalOriginalValue += (discountedPrice * quantity);
+    }
+    
+    // Calculate for offer price items
+    for (var item in _offerPriceItems) {
+      final double discountedPrice = item['price'] ?? 0.0;
+      final double appliedPrice = item['appliedPrice'] ?? 0.0;
+      final int quantity = item['quantity'] is int ? item['quantity'] as int : 0;
+      
+      _offerTotal += (appliedPrice * quantity);
+      _offerItemsCount += quantity;
+      _totalSavings += (discountedPrice - appliedPrice) * quantity;
+      _subTotal += (appliedPrice * quantity);
+      _totalOriginalValue += (discountedPrice * quantity);
+    }
+    
+    // Calculate for regular price items
+    for (var item in _regularPriceItems) {
+      final double discountedPrice = item['price'] ?? 0.0;
+      final int quantity = item['quantity'] is int ? item['quantity'] as int : 0;
+      
+      _regularTotal += (discountedPrice * quantity);
+      _regularItemsCount += quantity;
+      _subTotal += (discountedPrice * quantity);
+      _totalOriginalValue += (discountedPrice * quantity);
     }
     
     _grandTotal = _subTotal; // No delivery charge
@@ -186,36 +264,57 @@ class _HarithCartPageState extends State<HarithCartPage> {
     );
   }
 
-  Widget _buildCartItem(int index) {
-    final item = _cartItems[index];
+  Widget _buildCartItemHeader(String title, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3), width: 1),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            color == Colors.orange ? Icons.card_membership :
+            color == Colors.blue ? Icons.local_offer :
+            Icons.price_check,
+            color: color,
+            size: 18,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCartItem(Map<String, dynamic> item) {
     final String name = item['name']?.toString() ?? 'Unknown';
     final String? imageUrl = item['image']?.toString();
     final int quantity = item['quantity'] is int ? item['quantity'] as int : 0;
-    final double discountedPrice = item['price'] ?? 0.0; // This is discountedprice
-    final double? offerPrice = item['offerPrice']; // offerprice
-    final double? lastPrice = item['lastPrice']; // lastprice
-    final bool isEligibleForLastPrice = item['isEligibleForLastPrice'] ?? false;
+    final double discountedPrice = item['price'] ?? 0.0;
+    final double? offerPrice = item['offerPrice'];
+    final double? lastPrice = item['lastPrice'];
+    final double lastPriceQuantity = item['lastPriceQuantity'] ?? 0.0;
+    final double remainingLastPriceQuantity = item['remainingLastPriceQuantity'] ?? 0.0;
+    final double appliedPrice = item['appliedPrice'] ?? discountedPrice;
+    final String priceType = item['priceType'] ?? 'regular';
+    final String priceTypeLabel = item['priceTypeLabel'] ?? 'Regular Price';
+    final Color priceColor = item['priceColor'] ?? Colors.green;
+    final int remainingAtMemberPrice = item['remainingAtMemberPrice'] ?? 0;
+    final int atMemberPriceCount = item['atMemberPriceCount'] ?? 0;
+    final int atOtherPriceCount = item['atOtherPriceCount'] ?? 0;
     
-    double finalPrice;
-    String priceType = 'Regular';
-    Color priceColor = Colors.green;
-    
-    // Determine which price applies
-    if (_hasMembership && lastPrice != null && lastPrice > 0 && isEligibleForLastPrice) {
-      finalPrice = lastPrice;
-      priceType = 'Member';
-      priceColor = Colors.orange;
-    } else if (offerPrice != null && offerPrice > 0) {
-      finalPrice = offerPrice;
-      priceType = 'Offer';
-      priceColor = Colors.blue;
-    } else {
-      finalPrice = discountedPrice;
-      priceType = 'Regular';
-      priceColor = Colors.green;
-    }
-    
-    final double itemTotal = finalPrice * quantity;
+    final double itemTotal = appliedPrice * quantity;
     final double originalItemTotal = discountedPrice * quantity;
     final double savings = originalItemTotal - itemTotal;
 
@@ -224,6 +323,7 @@ class _HarithCartPageState extends State<HarithCartPage> {
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -284,44 +384,82 @@ class _HarithCartPageState extends State<HarithCartPage> {
                       
                       const SizedBox(height: 8),
                       
-                      // All Three Prices Display
+                      // Price Breakdown
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Regular Price (discountedprice)
-                          _buildPriceRow(
-                            'Regular Price:',
-                            '₹${discountedPrice.toStringAsFixed(2)}',
-                            isApplied: priceType == 'Regular',
-                            color: priceType == 'Regular' ? Colors.green : Colors.grey,
+                          _buildPriceComparisonRow(
+                            label: 'Standard Price:',
+                            price: discountedPrice,
+                            isCrossedOut: priceType != 'regular' || (priceType == 'member' && atOtherPriceCount > 0),
+                            quantity: priceType == 'member' && atOtherPriceCount > 0 ? atOtherPriceCount : null,
                           ),
                           
                           // Offer Price (offerprice)
                           if (offerPrice != null && offerPrice > 0)
-                            _buildPriceRow(
-                              'Offer Price:',
-                              '₹${offerPrice.toStringAsFixed(2)}',
-                              isApplied: priceType == 'Offer',
-                              color: priceType == 'Offer' ? Colors.blue : Colors.grey,
+                            _buildPriceComparisonRow(
+                              label: 'Offer Price:',
+                              price: offerPrice,
+                              isApplied: priceType == 'offer' || (priceType == 'member' && atOtherPriceCount > 0),
+                              isCrossedOut: priceType == 'member' && atMemberPriceCount > 0,
+                              quantity: priceType == 'member' && atOtherPriceCount > 0 ? atOtherPriceCount : null,
                             ),
                           
                           // Member Price (lastprice)
                           if (lastPrice != null && lastPrice > 0)
-                            _buildPriceRow(
-                              _hasMembership ? 'Your Member Price:' : 'Member Price:',
-                              '₹${lastPrice.toStringAsFixed(2)}',
-                              isApplied: priceType == 'Member',
-                              color: priceType == 'Member' ? Colors.orange : Colors.grey,
-                              isMemberPrice: true,
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildPriceComparisonRow(
+                                  label: _hasMembership ? 'Your Member Price:' : 'Member Price:',
+                                  price: lastPrice,
+                                  isApplied: priceType == 'member',
+                                  quantity: atMemberPriceCount > 0 ? atMemberPriceCount : null,
+                                  isMemberPrice: true,
+                                ),
+                                
+                                // Member price quota info
+                                if (_hasMembership && priceType == 'member')
+                                  Container(
+                                    margin: const EdgeInsets.only(top: 4, left: 4),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange[50],
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(color: Colors.orange[200]!),
+                                    ),
+                                    child: Text(
+                                      atMemberPriceCount > 0
+                                          ? '$atMemberPriceCount at member price, ${atOtherPriceCount > 0 ? '$atOtherPriceCount at ${offerPrice != null && offerPrice > 0 ? 'offer' : 'regular'} price' : ''}'
+                                          : 'Member quota used',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.orange,
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
                           
                           // If no lastprice available
                           if (lastPrice == null || lastPrice <= 0)
-                            _buildPriceRow(
-                              'Member Price:',
-                              'Not Available',
-                              color: Colors.grey,
-                              isNotAvailable: true,
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.info_outline, size: 14, color: Colors.grey),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Member price not available',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                         ],
                       ),
@@ -338,13 +476,26 @@ class _HarithCartPageState extends State<HarithCartPage> {
                           borderRadius: BorderRadius.circular(4),
                           border: Border.all(color: priceColor),
                         ),
-                        child: Text(
-                          'Applied: $priceType Price',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: priceColor,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              priceType == 'member' ? Icons.card_membership :
+                              priceType == 'offer' ? Icons.local_offer :
+                              Icons.price_check,
+                              size: 14,
+                              color: priceColor,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Applied: $priceTypeLabel',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: priceColor,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       
@@ -352,13 +503,19 @@ class _HarithCartPageState extends State<HarithCartPage> {
                       if (savings > 0)
                         Padding(
                           padding: const EdgeInsets.only(top: 4),
-                          child: Text(
-                            'You save: ₹${savings.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.green,
-                              fontStyle: FontStyle.italic,
-                            ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.savings, size: 14, color: Colors.green),
+                              const SizedBox(width: 4),
+                              Text(
+                                'You save: ₹${savings.toStringAsFixed(2)}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       
@@ -375,7 +532,7 @@ class _HarithCartPageState extends State<HarithCartPage> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             InkWell(
-                              onTap: () => _updateQuantity(index, quantity - 1),
+                              onTap: () => _updateQuantity(_cartItems.indexWhere((i) => i['id'] == item['id']), quantity - 1),
                               borderRadius: BorderRadius.circular(6),
                               child: Container(
                                 width: 32,
@@ -393,16 +550,28 @@ class _HarithCartPageState extends State<HarithCartPage> {
                               ),
                             ),
                             
-                            Text(
-                              '$quantity',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
+                            Column(
+                              children: [
+                                Text(
+                                  '$quantity',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                if (priceType == 'member' && remainingAtMemberPrice > 0)
+                                  Text(
+                                    '${remainingAtMemberPrice - atMemberPriceCount} more at member price',
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.orange,
+                                    ),
+                                  ),
+                              ],
                             ),
                             
                             InkWell(
-                              onTap: () => _updateQuantity(index, quantity + 1),
+                              onTap: () => _updateQuantity(_cartItems.indexWhere((i) => i['id'] == item['id']), quantity + 1),
                               borderRadius: BorderRadius.circular(6),
                               child: Container(
                                 width: 32,
@@ -428,7 +597,7 @@ class _HarithCartPageState extends State<HarithCartPage> {
                 
                 // Delete Button
                 IconButton(
-                  onPressed: () => _removeItem(index),
+                  onPressed: () => _removeItem(_cartItems.indexWhere((i) => i['id'] == item['id'])),
                   icon: const Icon(
                     Icons.delete_outline,
                     color: Colors.red,
@@ -439,26 +608,109 @@ class _HarithCartPageState extends State<HarithCartPage> {
             
             // Item Total
             const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerRight,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Item Total: ₹${itemTotal.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Item Total:',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '₹${itemTotal.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green,
+                            ),
+                          ),
+                          if (savings > 0)
+                            Text(
+                              'Original: ₹${originalItemTotal.toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                                decoration: TextDecoration.lineThrough,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
                   ),
-                  if (savings > 0)
-                    Text(
-                      'Original: ₹${originalItemTotal.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
-                        decoration: TextDecoration.lineThrough,
+                  
+                  // Detailed breakdown for mixed pricing
+                  if (priceType == 'member' && atMemberPriceCount > 0 && atOtherPriceCount > 0)
+                    Container(
+                      margin: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Price Breakdown:',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '• $atMemberPriceCount at member price:',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.orange,
+                                ),
+                              ),
+                              Text(
+                                '₹${(lastPrice! * atMemberPriceCount).toStringAsFixed(2)}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.orange,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '• $atOtherPriceCount at ${offerPrice != null && offerPrice > 0 ? 'offer' : 'regular'} price:',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: offerPrice != null && offerPrice > 0 ? Colors.blue : Colors.green,
+                                ),
+                              ),
+                              Text(
+                                '₹${((offerPrice != null && offerPrice > 0 ? offerPrice : discountedPrice) * atOtherPriceCount).toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: offerPrice != null && offerPrice > 0 ? Colors.blue : Colors.green,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                 ],
@@ -470,16 +722,32 @@ class _HarithCartPageState extends State<HarithCartPage> {
     );
   }
 
-  Widget _buildPriceRow(String label, String value, {
+  Widget _buildPriceComparisonRow({
+    required String label,
+    required double price,
     bool isApplied = false,
-    Color color = Colors.grey,
+    bool isCrossedOut = false,
     bool isMemberPrice = false,
-    bool isNotAvailable = false,
+    int? quantity,
   }) {
+    final Color color = isMemberPrice
+        ? Colors.orange
+        : isApplied
+            ? (isMemberPrice ? Colors.orange : Colors.blue)
+            : Colors.grey[600]!;
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
+      padding: const EdgeInsets.only(bottom: 4),
       child: Row(
         children: [
+          Icon(
+            isMemberPrice ? Icons.card_membership :
+            isApplied ? Icons.check_circle :
+            Icons.circle_outlined,
+            size: 14,
+            color: color,
+          ),
+          const SizedBox(width: 6),
           Expanded(
             child: Text(
               label,
@@ -487,20 +755,33 @@ class _HarithCartPageState extends State<HarithCartPage> {
                 fontSize: 13,
                 color: color,
                 fontWeight: isApplied ? FontWeight.bold : FontWeight.normal,
+                decoration: isCrossedOut ? TextDecoration.lineThrough : null,
               ),
             ),
           ),
           Text(
-            value,
+            '₹${price.toStringAsFixed(2)}',
             style: TextStyle(
               fontSize: 13,
               color: color,
               fontWeight: isApplied ? FontWeight.bold : FontWeight.normal,
-              fontStyle: isNotAvailable ? FontStyle.italic : FontStyle.normal,
+              decoration: isCrossedOut ? TextDecoration.lineThrough : null,
             ),
           ),
+          if (quantity != null)
+            Padding(
+              padding: const EdgeInsets.only(left: 4),
+              child: Text(
+                '×$quantity',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: color,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
         ],
-      )
+      ),
     );
   }
 
@@ -537,45 +818,85 @@ class _HarithCartPageState extends State<HarithCartPage> {
 
       final orderId = 'HARITH-${DateTime.now().millisecondsSinceEpoch}';
       
-      final List<Map<String, dynamic>> orderItems = _cartItems.map((item) {
-        final double discountedPrice = item['price'] ?? 0.0; // discountedprice
-        final double? offerPrice = item['offerPrice']; // offerprice
-        final double? lastPrice = item['lastPrice']; // lastprice
-        final int quantity = item['quantity'] is int ? item['quantity'] as int : 0;
+      final List<Map<String, dynamic>> orderItems = [];
+      
+      // Process member price items with mixed pricing
+      for (var item in _memberPriceItems) {
+        final int atMemberPriceCount = item['atMemberPriceCount'] ?? 0;
+        final int atOtherPriceCount = item['atOtherPriceCount'] ?? 0;
         
-        double finalPrice;
-        String priceType = 'regular';
-        
-        // Determine which price was applied
-        if (_hasMembership && 
-            lastPrice != null && 
-            lastPrice > 0 && 
-            item['isEligibleForLastPrice'] == true) {
-          finalPrice = lastPrice;
-          priceType = 'member';
-        } else if (offerPrice != null && offerPrice > 0) {
-          finalPrice = offerPrice;
-          priceType = 'offer';
-        } else {
-          finalPrice = discountedPrice;
-          priceType = 'regular';
+        if (atMemberPriceCount > 0) {
+          orderItems.add({
+            'productId': item['id'],
+            'name': item['name'],
+            'image': item['image'],
+            'quantity': atMemberPriceCount,
+            'discountedPrice': item['price'],
+            'offerPrice': item['offerPrice'],
+            'lastPrice': item['lastPrice'],
+            'isEligibleForLastPrice': true,
+            'unitPrice': item['lastPrice'],
+            'priceType': 'member',
+            'itemTotal': (item['lastPrice'] ?? 0.0) * atMemberPriceCount,
+            'originalValue': (item['price'] ?? 0.0) * atMemberPriceCount,
+          });
         }
         
-        return {
+        if (atOtherPriceCount > 0) {
+          final priceType = item['offerPrice'] != null && item['offerPrice']! > 0 ? 'offer' : 'regular';
+          final unitPrice = priceType == 'offer' ? item['offerPrice'] : item['price'];
+          
+          orderItems.add({
+            'productId': item['id'],
+            'name': item['name'],
+            'image': item['image'],
+            'quantity': atOtherPriceCount,
+            'discountedPrice': item['price'],
+            'offerPrice': item['offerPrice'],
+            'lastPrice': item['lastPrice'],
+            'isEligibleForLastPrice': false,
+            'unitPrice': unitPrice,
+            'priceType': priceType,
+            'itemTotal': unitPrice * atOtherPriceCount,
+            'originalValue': (item['price'] ?? 0.0) * atOtherPriceCount,
+          });
+        }
+      }
+      
+      // Process offer and regular price items
+      for (var item in _offerPriceItems) {
+        orderItems.add({
           'productId': item['id'],
           'name': item['name'],
           'image': item['image'],
-          'quantity': quantity,
-          'discountedPrice': discountedPrice, // Regular price
-          'offerPrice': offerPrice, // Offer price
-          'lastPrice': lastPrice, // Member price
-          'isEligibleForLastPrice': item['isEligibleForLastPrice'] ?? false,
-          'unitPrice': finalPrice,
-          'priceType': priceType,
-          'itemTotal': finalPrice * quantity,
-          'originalValue': discountedPrice * quantity, // Value at regular price
-        };
-      }).toList();
+          'quantity': item['quantity'],
+          'discountedPrice': item['price'],
+          'offerPrice': item['offerPrice'],
+          'lastPrice': item['lastPrice'],
+          'isEligibleForLastPrice': false,
+          'unitPrice': item['offerPrice'],
+          'priceType': 'offer',
+          'itemTotal': (item['offerPrice'] ?? 0.0) * item['quantity'],
+          'originalValue': (item['price'] ?? 0.0) * item['quantity'],
+        });
+      }
+      
+      for (var item in _regularPriceItems) {
+        orderItems.add({
+          'productId': item['id'],
+          'name': item['name'],
+          'image': item['image'],
+          'quantity': item['quantity'],
+          'discountedPrice': item['price'],
+          'offerPrice': item['offerPrice'],
+          'lastPrice': item['lastPrice'],
+          'isEligibleForLastPrice': false,
+          'unitPrice': item['price'],
+          'priceType': 'regular',
+          'itemTotal': (item['price'] ?? 0.0) * item['quantity'],
+          'originalValue': (item['price'] ?? 0.0) * item['quantity'],
+        });
+      }
 
       final orderData = {
         'orderId': orderId,
@@ -589,7 +910,7 @@ class _HarithCartPageState extends State<HarithCartPage> {
         'hasMembership': _hasMembership,
         'items': orderItems,
         'subTotal': _subTotal,
-        'originalTotalValue': _totalOriginalValue, // Total at regular prices
+        'originalTotalValue': _totalOriginalValue,
         'grandTotal': _grandTotal,
         'memberItemsCount': _memberItemsCount,
         'offerItemsCount': _offerItemsCount,
@@ -640,7 +961,6 @@ class _HarithCartPageState extends State<HarithCartPage> {
     }
   }
 
-  // Update the order confirmation dialog
   void _showOrderConfirmation() {
     showDialog(
       context: context,
@@ -720,38 +1040,6 @@ class _HarithCartPageState extends State<HarithCartPage> {
     );
   }
 
-  Widget _buildPriceBreakdownRow(String label, String value, {
-    Color? color,
-    bool isBold = false,
-    bool isDiscount = false,
-    double fontSize = 14,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: fontSize,
-              color: color ?? Colors.black,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-          Text(
-            isDiscount ? '-$value' : value,
-            style: TextStyle(
-              fontSize: fontSize,
-              color: isDiscount ? Colors.green : (color ?? Colors.black),
-              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
 Widget _buildPriceBreakdown() {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -766,46 +1054,52 @@ Widget _buildPriceBreakdown() {
       
       const SizedBox(height: 16),
       
-      // Summary by Price Type
+      // Price breakdown by type
       if (_memberItemsCount > 0)
-        _buildSimplePriceRow(
-          'Member Price Items',
-          '${_memberItemsCount} items × ₹${_memberTotal.toStringAsFixed(2)}',
+        _buildPriceTypeRow(
+          label: 'Member Price Items',
+          count: _memberItemsCount,
+          total: _memberTotal,
           color: Colors.orange,
+          icon: Icons.card_membership,
         ),
       
       if (_offerItemsCount > 0)
-        _buildSimplePriceRow(
-          'Offer Price Items',
-          '${_offerItemsCount} items × ₹${_offerTotal.toStringAsFixed(2)}',
+        _buildPriceTypeRow(
+          label: 'Offer Price Items',
+          count: _offerItemsCount,
+          total: _offerTotal,
           color: Colors.blue,
+          icon: Icons.local_offer,
         ),
       
       if (_regularItemsCount > 0)
-        _buildSimplePriceRow(
-          'Regular Price Items',
-          '${_regularItemsCount} items × ₹${_regularTotal.toStringAsFixed(2)}',
+        _buildPriceTypeRow(
+          label: 'Regular Price Items',
+          count: _regularItemsCount,
+          total: _regularTotal,
           color: Colors.green,
+          icon: Icons.price_check,
         ),
       
       const SizedBox(height: 12),
       const Divider(),
       const SizedBox(height: 8),
       
-      // Simple Total Breakdown
+      // Totals
       Column(
         children: [
           _buildSimplePriceRow(
-            'Total Items',
-            '${_cartItems.length} items',
+            label: 'Total Items',
+            value: '${_memberItemsCount + _offerItemsCount + _regularItemsCount} items',
             fontSize: 14,
           ),
           
           const SizedBox(height: 4),
           
           _buildSimplePriceRow(
-            'Subtotal',
-            '₹${_subTotal.toStringAsFixed(2)}',
+            label: 'Subtotal',
+            value: '₹${_subTotal.toStringAsFixed(2)}',
             fontSize: 14,
           ),
           
@@ -813,8 +1107,8 @@ Widget _buildPriceBreakdown() {
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: _buildSimplePriceRow(
-                'You Save',
-                '-₹${_totalSavings.toStringAsFixed(2)}',
+                label: 'Total Savings',
+                value: '₹${_totalSavings.toStringAsFixed(2)}',
                 color: Colors.green,
                 fontSize: 14,
               ),
@@ -826,8 +1120,8 @@ Widget _buildPriceBreakdown() {
           
           // Grand Total
           _buildSimplePriceRow(
-            'Total Amount',
-            '₹${_grandTotal.toStringAsFixed(2)}',
+            label: 'Total Amount',
+            value: '₹${_grandTotal.toStringAsFixed(2)}',
             isBold: true,
             fontSize: 20,
             color: Colors.green,
@@ -865,7 +1159,7 @@ Widget _buildPriceBreakdown() {
           ),
         ),
       
-      // Member note
+      // Member benefits note
       if (_hasMembership && _memberItemsCount > 0)
         Padding(
           padding: const EdgeInsets.only(top: 8),
@@ -882,7 +1176,7 @@ Widget _buildPriceBreakdown() {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Member price applied to ${_memberItemsCount} items',
+                    'Member benefits applied to $_memberItemsCount items',
                     style: const TextStyle(
                       fontSize: 12,
                       color: Colors.orange,
@@ -912,7 +1206,7 @@ Widget _buildPriceBreakdown() {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Offer price applied to ${_offerItemsCount} items',
+                    'Offer price applied to $_offerItemsCount items',
                     style: const TextStyle(
                       fontSize: 12,
                       color: Colors.blue,
@@ -928,7 +1222,63 @@ Widget _buildPriceBreakdown() {
   );
 }
 
-Widget _buildSimplePriceRow(String label, String value, {
+Widget _buildPriceTypeRow({
+  required String label,
+  required int count,
+  required double total,
+  required Color color,
+  required IconData icon,
+}) {
+  return Container(
+    margin: const EdgeInsets.only(bottom: 8),
+    padding: const EdgeInsets.all(8),
+    decoration: BoxDecoration(
+      color: color.withOpacity(0.05),
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: color.withOpacity(0.2)),
+    ),
+    child: Row(
+      children: [
+        Icon(icon, size: 16, color: color),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+              ),
+              Text(
+                '$count items',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: color.withOpacity(0.8),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Text(
+          '₹${total.toStringAsFixed(2)}',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _buildSimplePriceRow({
+  required String label,
+  required String value,
   Color? color,
   bool isBold = false,
   double fontSize = 14,
@@ -958,15 +1308,6 @@ Widget _buildSimplePriceRow(String label, String value, {
     ),
   );
 }
-
-  Widget _buildOrderSummary() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: _buildPriceBreakdown(),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -1131,18 +1472,32 @@ Widget _buildSimplePriceRow(String label, String value, {
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       children: [
-                        // Cart Items
-                        Column(
-                          children: List.generate(
-                            _cartItems.length,
-                            (index) => _buildCartItem(index),
-                          ),
-                        ),
+                        // Show member price items first
+                        if (_memberPriceItems.isNotEmpty) ...[
+                          _buildCartItemHeader('Member Price Items', Colors.orange),
+                          const SizedBox(height: 8),
+                          ..._memberPriceItems.map((item) => _buildCartItem(item)),
+                          const SizedBox(height: 16),
+                        ],
                         
-                        const SizedBox(height: 24),
+                        // Show offer price items
+                        if (_offerPriceItems.isNotEmpty) ...[
+                          _buildCartItemHeader('Offer Price Items', Colors.blue),
+                          const SizedBox(height: 8),
+                          ..._offerPriceItems.map((item) => _buildCartItem(item)),
+                          const SizedBox(height: 16),
+                        ],
+                        
+                        // Show regular price items
+                        if (_regularPriceItems.isNotEmpty) ...[
+                          _buildCartItemHeader('Regular Price Items', Colors.green),
+                          const SizedBox(height: 8),
+                          ..._regularPriceItems.map((item) => _buildCartItem(item)),
+                          const SizedBox(height: 16),
+                        ],
                         
                         // Price Breakdown
-                        _buildOrderSummary(),
+                        _buildPriceBreakdown(),
                         
                         const SizedBox(height: 24),
                       ],

@@ -244,6 +244,13 @@ class _HarithStorePageState extends State<HarithStorePage> {
           final bool isInCart = cartItem.isNotEmpty;
           final int cartQuantity = isInCart ? (cartItem['quantity'] ?? 0) : 0;
 
+          // Adjust remaining last price based on cart quantity
+          if (isInCart && _hasMembership && lastPrice != null && lastPrice > 0) {
+            final double totalInCart = alreadyPurchased + cartQuantity;
+            remainingLastPriceQuantity = (lastPriceQuantity - totalInCart).clamp(0.0, lastPriceQuantity);
+            isEligibleForLastPrice = remainingLastPriceQuantity > 0;
+          }
+
           return {
             'id': productId,
             'name': data['name'] as String? ?? 'Unknown',
@@ -305,14 +312,34 @@ class _HarithStorePageState extends State<HarithStorePage> {
 
   void _addToCart(Map<String, dynamic> product) {
     final String productId = product['id'];
-    final int existingIndex =
-        _cartItems.indexWhere((item) => item['id'] == productId);
+    final int existingIndex = _cartItems.indexWhere((item) => item['id'] == productId);
+    final double? lastPrice = product['lastPrice'];
+    final double lastPriceQuantity = product['lastPriceQuantity'];
+    final double remainingLastPriceQuantity = product['remainingLastPriceQuantity'];
+
+    // Check if user is still eligible for last price
+    bool shouldUseLastPrice = _hasMembership && 
+        lastPrice != null && 
+        lastPrice > 0 && 
+        remainingLastPriceQuantity > 0;
 
     if (existingIndex != -1) {
-      // Update quantity if already in cart
+      // Get current quantity in cart
+      final int currentQuantity = _cartItems[existingIndex]['quantity'] ?? 0;
+      
+      // Check if we should still use last price for this addition
+      final bool useLastPriceForThisItem = shouldUseLastPrice && 
+          (currentQuantity < lastPriceQuantity.floor());
+      
+      // Update quantity
       setState(() {
-        _cartItems[existingIndex]['quantity'] =
-            (_cartItems[existingIndex]['quantity'] ?? 0) + 1;
+        _cartItems[existingIndex]['quantity'] = currentQuantity + 1;
+        
+        // If this addition crosses the last price threshold, update the price
+        if (useLastPriceForThisItem && (currentQuantity + 1) > lastPriceQuantity.floor()) {
+          // Switch to regular price for future additions
+          _cartItems[existingIndex]['isEligibleForLastPrice'] = false;
+        }
       });
     } else {
       // Add new item to cart
@@ -322,11 +349,11 @@ class _HarithStorePageState extends State<HarithStorePage> {
           'name': product['name'],
           'price': product['price'],
           'offerPrice': product['offerPrice'],
-          'lastPrice': product['lastPrice'],
-          'lastPriceQuantity': product['lastPriceQuantity'],
-          'remainingLastPriceQuantity': product['remainingLastPriceQuantity'],
+          'lastPrice': lastPrice,
+          'lastPriceQuantity': lastPriceQuantity,
+          'remainingLastPriceQuantity': remainingLastPriceQuantity,
           'alreadyPurchased': product['alreadyPurchased'],
-          'isEligibleForLastPrice': product['isEligibleForLastPrice'],
+          'isEligibleForLastPrice': shouldUseLastPrice,
           'image': product['image'],
           'quantity': 1,
           'addedAt': DateTime.now().toIso8601String(),
@@ -339,18 +366,29 @@ class _HarithStorePageState extends State<HarithStorePage> {
     if (productIndex != -1) {
       setState(() {
         _products[productIndex]['isInCart'] = true;
-        _products[productIndex]['cartQuantity'] =
+        _products[productIndex]['cartQuantity'] = 
             (_products[productIndex]['cartQuantity'] ?? 0) + 1;
+        
+        // Update remaining last price quantity
+        if (shouldUseLastPrice) {
+          _products[productIndex]['remainingLastPriceQuantity'] = 
+              (_products[productIndex]['remainingLastPriceQuantity'] ?? 0) - 1;
+        }
       });
     }
 
-    _saveCartToPrefs(); // Save to SharedPreferences
+    _saveCartToPrefs();
     _filterProducts();
 
+    String message = '${product['name']} added to cart';
+    if (shouldUseLastPrice) {
+      message += ' at member price';
+    }
+    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${product['name']} added to cart'),
-        backgroundColor: Colors.green,
+        content: Text(message),
+        backgroundColor: shouldUseLastPrice ? Colors.orange : Colors.green,
         duration: const Duration(seconds: 2),
       ),
     );
@@ -370,7 +408,7 @@ class _HarithStorePageState extends State<HarithStorePage> {
       });
     }
 
-    _saveCartToPrefs(); // Save to SharedPreferences
+    _saveCartToPrefs();
     _filterProducts();
   }
 
@@ -382,24 +420,41 @@ class _HarithStorePageState extends State<HarithStorePage> {
 
     final cartIndex = _cartItems.indexWhere((item) => item['id'] == productId);
     if (cartIndex != -1) {
+      final double? lastPrice = _cartItems[cartIndex]['lastPrice'];
+      final double lastPriceQuantity = _cartItems[cartIndex]['lastPriceQuantity'] ?? 0;
+      
+      // Update quantity
       setState(() {
         _cartItems[cartIndex]['quantity'] = quantity;
+        
+        // Check if we should switch between last price and regular price
+        if (lastPrice != null && lastPrice > 0 && lastPriceQuantity > 0) {
+          _cartItems[cartIndex]['isEligibleForLastPrice'] = 
+              quantity <= lastPriceQuantity.floor();
+        }
       });
     }
 
-    // Update product's cart quantity
+    // Update product's cart quantity and remaining last price
     final productIndex = _products.indexWhere((p) => p['id'] == productId);
     if (productIndex != -1) {
       setState(() {
         _products[productIndex]['cartQuantity'] = quantity;
+        
+        // Update remaining last price quantity
+        final double lastPriceQuantity = _products[productIndex]['lastPriceQuantity'] ?? 0;
+        final double alreadyPurchased = _products[productIndex]['alreadyPurchased'] ?? 0;
+        final double totalPurchased = alreadyPurchased + quantity;
+        
+        _products[productIndex]['remainingLastPriceQuantity'] = 
+            (lastPriceQuantity - totalPurchased).clamp(0.0, lastPriceQuantity);
       });
     }
 
-    _saveCartToPrefs(); // Save to SharedPreferences
+    _saveCartToPrefs();
     _filterProducts();
   }
 
-  // Add a clear cart function that can be called from app bar
   void _clearCart() {
     showDialog(
       context: context,
@@ -639,14 +694,18 @@ class _HarithStorePageState extends State<HarithStorePage> {
                           remainingLastPriceQuantity: remainingLastPriceQuantity,
                           alreadyPurchased: alreadyPurchased,
                           isEligibleForLastPrice: isEligibleForLastPrice,
+                          cartQuantity: cartQuantity,
                         ),
                       ],
                     ),
 
-                    // Cart Button - Similar to ProductCard style
+                    // Cart Button
                     _buildCartButton(
                       isInCart: isInCart,
                       cartQuantity: cartQuantity,
+                      lastPriceQuantity: lastPriceQuantity,
+                      remainingLastPriceQuantity: remainingLastPriceQuantity,
+                      isEligibleForLastPrice: isEligibleForLastPrice,
                       onAddToCart: () => _addToCart(product),
                       onIncreaseQuantity: () => _updateQuantity(product['id'], cartQuantity + 1),
                       onDecreaseQuantity: () => _updateQuantity(product['id'], cartQuantity - 1),
@@ -661,22 +720,40 @@ class _HarithStorePageState extends State<HarithStorePage> {
     );
   }
 
-  // Cart Button Builder - Similar to ProductCard style
+  // Cart Button Builder
   Widget _buildCartButton({
     required bool isInCart,
     required int cartQuantity,
+    required double lastPriceQuantity,
+    required double remainingLastPriceQuantity,
+    required bool isEligibleForLastPrice,
     required VoidCallback onAddToCart,
     required VoidCallback onIncreaseQuantity,
     required VoidCallback onDecreaseQuantity,
   }) {
+    // Calculate how many items the user can still add at last price
+    final int remainingAtLastPrice = remainingLastPriceQuantity.floor();
+    
+    // Check if user is still eligible for last price based on current cart quantity
+    final bool canAddAtLastPrice = isEligibleForLastPrice && 
+        cartQuantity < remainingAtLastPrice;
+
+    // If item is in cart and we're still within last price quantity
     if (isInCart && cartQuantity > 0) {
-      // Quantity Controls
+      // Check if we should still show last price or switch to regular price
+      final bool showLastPriceInCart = _hasMembership && 
+          lastPriceQuantity > 0 && 
+          cartQuantity <= remainingAtLastPrice;
+
       return Container(
         height: 32,
         decoration: BoxDecoration(
-          color: Colors.green.shade50,
+          color: showLastPriceInCart ? Colors.orange.shade50 : Colors.green.shade50,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.green.shade200, width: 1),
+          border: Border.all(
+            color: showLastPriceInCart ? Colors.orange.shade200 : Colors.green.shade200, 
+            width: 1,
+          ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -687,29 +764,44 @@ class _HarithStorePageState extends State<HarithStorePage> {
               icon: Icon(
                 cartQuantity > 1 ? Icons.remove : Icons.delete_outline,
                 size: 16,
-                color: cartQuantity > 1 ? Colors.green : Colors.red,
+                color: cartQuantity > 1 ? 
+                  (showLastPriceInCart ? Colors.orange : Colors.green) : 
+                  Colors.red,
               ),
               padding: const EdgeInsets.only(left: 8),
               constraints: const BoxConstraints(),
             ),
             
-            // Quantity Display
-            Text(
-              '$cartQuantity',
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Colors.green,
-              ),
+            // Quantity Display with price indicator
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '$cartQuantity',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: showLastPriceInCart ? Colors.orange : Colors.green,
+                  ),
+                ),
+                if (showLastPriceInCart && remainingAtLastPrice > 0)
+                  Text(
+                    '${remainingAtLastPrice - cartQuantity} more at member price',
+                    style: const TextStyle(
+                      fontSize: 8,
+                      color: Colors.orange,
+                    ),
+                  ),
+              ],
             ),
             
             // Increase Button
             IconButton(
               onPressed: onIncreaseQuantity,
-              icon: const Icon(
+              icon: Icon(
                 Icons.add,
                 size: 16,
-                color: Colors.green,
+                color: showLastPriceInCart ? Colors.orange : Colors.green,
               ),
               padding: const EdgeInsets.only(right: 8),
               constraints: const BoxConstraints(),
@@ -718,13 +810,21 @@ class _HarithStorePageState extends State<HarithStorePage> {
         ),
       );
     } else {
-      // Add to Cart Button
+      // Add to Cart Button - Show different text based on eligibility
+      final String buttonText = canAddAtLastPrice 
+          ? 'Add at Member Price'
+          : 'Add to Cart';
+      
+      final Color buttonColor = canAddAtLastPrice 
+          ? Colors.orange 
+          : const Color.fromARGB(255, 116, 190, 119);
+      
       return SizedBox(
         height: 32,
         child: ElevatedButton.icon(
           onPressed: onAddToCart,
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color.fromARGB(255, 116, 190, 119),
+            backgroundColor: buttonColor,
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
@@ -732,13 +832,13 @@ class _HarithStorePageState extends State<HarithStorePage> {
             elevation: 0,
             padding: const EdgeInsets.symmetric(horizontal: 8),
           ),
-          icon: const Icon(
-            Icons.add_shopping_cart,
+          icon: Icon(
+            canAddAtLastPrice ? Icons.card_membership : Icons.add_shopping_cart,
             size: 16,
           ),
-          label: const Text(
-            'Add to Cart',
-            style: TextStyle(
+          label: Text(
+            buttonText,
+            style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
@@ -756,8 +856,15 @@ class _HarithStorePageState extends State<HarithStorePage> {
     required double remainingLastPriceQuantity,
     required double alreadyPurchased,
     required bool isEligibleForLastPrice,
+    required int cartQuantity,
   }) {
-    if (_hasMembership && lastPrice != null && lastPrice > 0) {
+    // Check if item is in cart and if we're still within last price quantity
+    final bool showLastPrice = _hasMembership && 
+        lastPrice != null && 
+        lastPrice > 0 && 
+        (remainingLastPriceQuantity > 0 || cartQuantity <= lastPriceQuantity.floor());
+    
+    if (showLastPrice) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -790,24 +897,24 @@ class _HarithStorePageState extends State<HarithStorePage> {
             margin: const EdgeInsets.only(top: 4),
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: isEligibleForLastPrice 
+              color: remainingLastPriceQuantity > 0 
                   ? Colors.orange[50] 
                   : Colors.grey[100],
               borderRadius: BorderRadius.circular(4),
               border: Border.all(
-                color: isEligibleForLastPrice 
+                color: remainingLastPriceQuantity > 0 
                     ? Colors.orange 
                     : Colors.grey,
                 width: 1,
               ),
             ),
             child: Text(
-              isEligibleForLastPrice
-                  ? '${remainingLastPriceQuantity.toStringAsFixed(2)}/${lastPriceQuantity.toStringAsFixed(2)} left'
-                  : 'Monthly quota used',
+              remainingLastPriceQuantity > 0
+                  ? '${remainingLastPriceQuantity.toStringAsFixed(2)}/${lastPriceQuantity.toStringAsFixed(2)} left at member price'
+                  : 'Member price used',
               style: TextStyle(
                 fontSize: 9,
-                color: isEligibleForLastPrice 
+                color: remainingLastPriceQuantity > 0 
                     ? Colors.orange[800] 
                     : Colors.grey[700],
                 fontWeight: FontWeight.w500,
@@ -820,18 +927,6 @@ class _HarithStorePageState extends State<HarithStorePage> {
               padding: const EdgeInsets.only(top: 4),
               child: Text(
                 'After quota: ₹${offerPrice.toStringAsFixed(2)}',
-                style: TextStyle(
-                  fontSize: 10,
-                  color: Colors.green[700],
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            )
-          else if (!isEligibleForLastPrice && price > 0)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                'After quota: ₹${price.toStringAsFixed(2)}',
                 style: TextStyle(
                   fontSize: 10,
                   color: Colors.green[700],
@@ -861,24 +956,6 @@ class _HarithStorePageState extends State<HarithStorePage> {
               color: Colors.green,
             ),
           ),
-          if (_hasMembership && lastPrice != null && lastPrice > 0)
-            Container(
-              margin: const EdgeInsets.only(top: 4),
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: Colors.orange[50],
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: Colors.orange, width: 1),
-              ),
-              child: Text(
-                'Member price: ₹${lastPrice.toStringAsFixed(2)}',
-                style: const TextStyle(
-                  fontSize: 9,
-                  color: Colors.orange,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
         ],
       );
     } else {
@@ -893,24 +970,6 @@ class _HarithStorePageState extends State<HarithStorePage> {
               color: Colors.green,
             ),
           ),
-          if (_hasMembership && lastPrice != null && lastPrice > 0)
-            Container(
-              margin: const EdgeInsets.only(top: 4),
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: Colors.orange[50],
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: Colors.orange, width: 1),
-              ),
-              child: Text(
-                'Member price: ₹${lastPrice.toStringAsFixed(2)}',
-                style: const TextStyle(
-                  fontSize: 9,
-                  color: Colors.orange,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
         ],
       );
     }
@@ -957,7 +1016,7 @@ class _HarithStorePageState extends State<HarithStorePage> {
         crossAxisCount: 2,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
-        childAspectRatio: 0.56, // Adjusted for new card layout
+        childAspectRatio: 0.56,
       ),
       itemCount: _filteredProducts.length,
       itemBuilder: (context, index) {
