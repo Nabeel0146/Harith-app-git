@@ -448,27 +448,49 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  Widget _deliveryAddressField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _textField(
-          'Delivery Address',
-          _deliveryAddressCtrl,
-          isOptional: true,
-          maxLines: 3,
-        ),
-        const SizedBox(height: 4),
-        const Text(
-          'Enter your complete delivery address for easier order delivery',
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.white70,
+ Widget _deliveryAddressField() {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      TextFormField(
+        controller: _deliveryAddressCtrl,
+        decoration: InputDecoration(
+          labelText: 'Delivery Address',
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Colors.grey),
           ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Colors.grey),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Colors.green, width: 2),
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         ),
-      ],
-    );
-  }
+        maxLines: 3,
+        validator: (v) {
+          if (v == null || v.trim().isEmpty) {
+            return 'Delivery address is required';
+          }
+          return null;
+        },
+      ),
+      const SizedBox(height: 4),
+      const Text(
+        'Enter your complete delivery address for order delivery',
+        style: TextStyle(
+          fontSize: 12,
+          color: Colors.white70,
+        ),
+      ),
+    ],
+  );
+}
 
   Widget _panchayathDropDown() {
     return DropdownButtonFormField<String>(
