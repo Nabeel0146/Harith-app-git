@@ -41,7 +41,7 @@ android {
     defaultConfig {
         applicationId "com.harith.app"
         // keep min/target sdk values provided by Flutter
-        minSdkVersion 23
+        minSdkVersion flutter.minSdkVersion
         targetSdk 36
         versionCode 4
         versionName "1.0.3"

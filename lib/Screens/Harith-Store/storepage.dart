@@ -1076,17 +1076,32 @@ class _HarithStorePageState extends State<HarithStorePage> {
     
     double totalAmount = 0.0;
     for (var item in _cartItems) {
-      double price;
-      if (_hasMembership && 
+      // Check eligibility based on membership and product having member price
+      bool isEligibleForCurrentCart = _hasMembership && 
           item['lastPrice'] != null && 
-          item['lastPrice'] > 0 && 
-          item['isEligibleForLastPrice'] == true) {
-        price = item['lastPrice'];
+          item['lastPrice'] > 0;
+      
+      final int quantity = item['quantity'] is int ? item['quantity'] as int : 0;
+      final double? offerPrice = item['offerPrice'];
+      final double lastPrice = item['lastPrice'] ?? 0.0;
+      final double discountedPrice = item['price'] ?? 0.0;
+      
+      if (isEligibleForCurrentCart && quantity > 0) {
+        // Apply mixed pricing: 1 at member price, rest at offer price
+        final int atMemberPriceCount = 1;  // Only 1 at member price
+        final int atOtherPriceCount = quantity - atMemberPriceCount;
+        
+        final double memberPricePortion = lastPrice * atMemberPriceCount;
+        final double otherPricePortion = atOtherPriceCount > 0
+            ? (offerPrice != null && offerPrice > 0 ? offerPrice : discountedPrice) * atOtherPriceCount
+            : 0.0;
+        
+        totalAmount += memberPricePortion + otherPricePortion;
       } else {
-        price = item['offerPrice'] ?? item['price'] ?? 0.0;
+        // Use offer price or regular price for all quantities
+        final double price = item['offerPrice'] ?? item['price'] ?? 0.0;
+        totalAmount += (price * quantity);
       }
-      final quantity = item['quantity'] is int ? item['quantity'] as int : 0;
-      totalAmount += (price * quantity);
     }
     
     return Positioned(

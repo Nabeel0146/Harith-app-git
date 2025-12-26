@@ -101,18 +101,21 @@ class _HarithCartPageState extends State<HarithCartPage> {
       // Create item copy with additional info
       final itemWithInfo = Map<String, dynamic>.from(item);
       
-      if (_hasMembership && 
-          lastPrice != null && 
-          lastPrice > 0 && 
-          isEligibleForLastPrice) {
-        // Member price applies
+      // Check eligibility based on membership and product having member price
+      bool isEligibleForCurrentCart = _hasMembership && lastPrice != null && lastPrice > 0;
+      if (isEligibleForCurrentCart) {
+        // Member price applies - but only 1 quantity per product can be at member price
         itemWithInfo['appliedPrice'] = lastPrice;
         itemWithInfo['priceType'] = 'member';
         itemWithInfo['priceTypeLabel'] = 'Member Price';
         itemWithInfo['priceColor'] = Colors.orange;
-        itemWithInfo['remainingAtMemberPrice'] = remainingLastPriceQuantity.floor();
-        itemWithInfo['atMemberPriceCount'] = quantity.clamp(0, remainingLastPriceQuantity.floor());
+        
+        // Only allow 1 quantity at member price per product, regardless of remaining quota
+        itemWithInfo['atMemberPriceCount'] = quantity > 0 ? 1 : 0;
         itemWithInfo['atOtherPriceCount'] = quantity - itemWithInfo['atMemberPriceCount'];
+        
+        // Update remaining at member price to reflect only 1 can be at member price
+        itemWithInfo['remainingAtMemberPrice'] = itemWithInfo['atOtherPriceCount'] > 0 ? 0 : 1;
         _memberPriceItems.add(itemWithInfo);
       } else if (offerPrice != null && offerPrice > 0) {
         // Offer price applies
@@ -314,7 +317,12 @@ class _HarithCartPageState extends State<HarithCartPage> {
     final int atMemberPriceCount = item['atMemberPriceCount'] ?? 0;
     final int atOtherPriceCount = item['atOtherPriceCount'] ?? 0;
     
-    final double itemTotal = appliedPrice * quantity;
+    // Calculate item total considering mixed pricing (member price for 1st item, offer/regular for additional)
+    final double memberPricePortion = atMemberPriceCount > 0 ? (lastPrice ?? 0.0) * atMemberPriceCount : 0.0;
+    final double otherPricePortion = atOtherPriceCount > 0 
+        ? (offerPrice != null && offerPrice > 0 ? offerPrice : discountedPrice) * atOtherPriceCount 
+        : 0.0;
+    final double itemTotal = memberPricePortion + otherPricePortion;
     final double originalItemTotal = discountedPrice * quantity;
     final double savings = originalItemTotal - itemTotal;
 
